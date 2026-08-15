@@ -1,15 +1,14 @@
 import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedRef,
   useAnimatedStyle,
   useScrollOffset,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
 
 const HEADER_HEIGHT = 250;
 
@@ -23,8 +22,8 @@ export default function ParallaxScrollView({
   headerImage,
   headerBackgroundColor,
 }: Props) {
-  const backgroundColor = useThemeColor({}, 'background');
   const colorScheme = useColorScheme() ?? 'light';
+  const insets = useSafeAreaInsets();
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollOffset(scrollRef);
   const headerAnimatedStyle = useAnimatedStyle(() => {
@@ -45,11 +44,8 @@ export default function ParallaxScrollView({
   });
 
   return (
-    <Animated.ScrollView
-      ref={scrollRef}
-      style={{ backgroundColor, flex: 1 }}
-      scrollEventThrottle={16}>
-      {headerImage && (
+    <Animated.ScrollView ref={scrollRef} style={styles.scrollView} scrollEventThrottle={16}>
+      {headerImage ? (
         <Animated.View
           style={[
             styles.header,
@@ -58,15 +54,19 @@ export default function ParallaxScrollView({
           ]}>
           {headerImage}
         </Animated.View>
+      ) : (
+        // no hero image on this screen — still reserve space so content clears the notch/status bar
+        <View style={{ height: insets.top }} />
       )}
-      <ThemedView style={styles.content}>{children}</ThemedView>
+      <View style={[styles.content, { paddingBottom: insets.bottom + 16 }]}>{children}</View>
     </Animated.ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   header: {
     height: HEADER_HEIGHT,
@@ -77,5 +77,6 @@ const styles = StyleSheet.create({
     padding: 32,
     gap: 16,
     overflow: 'hidden',
+    backgroundColor: 'transparent',
   },
 });

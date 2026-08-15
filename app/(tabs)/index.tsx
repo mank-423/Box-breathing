@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -9,29 +10,28 @@ import { Link } from 'expo-router';
 import { Button } from '@react-navigation/elements';
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#000000', dark: '#000000' }}
+      headerBackgroundColor={{ light: 'transparent', dark: 'transparent' }}
     >
-      <ThemedView style={styles.titleContainer}>
+      <ThemedView style={[styles.titleContainer, styles.transparent, { marginTop: insets.top }]}>
         <ThemedText type="title">Hello</ThemedText>
         <HelloWave />
       </ThemedView>
 
-      <ThemedView style={styles.titleContainer}>
+      <ThemedView style={[styles.titleContainer, styles.transparent]}>
         <ThemedText type="title">Box Breathing</ThemedText>
       </ThemedView>
 
-      <ThemedView style={styles.titleContainer}>
-        <Link href={'/breath'}>
+      <ThemedView style={[styles.titleContainer, styles.transparent]}>
+        <Link href="/breath" asChild>
           <Button>
             Go for activity
           </Button>
         </Link>
       </ThemedView>
-
-
-
     </ParallaxScrollView>
   );
 }
@@ -42,12 +42,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  appContainer: {
-    backgroundColor: '#0000'
+  transparent: {
+    backgroundColor: 'transparent',
   },
   linkButton: {
-    borderRadius: '10px',
-    backgroundColor: 'white'
+    borderRadius: 10,
+    backgroundColor: 'white',
   },
   stepContainer: {
     gap: 8,
