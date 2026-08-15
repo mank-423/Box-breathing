@@ -3,7 +3,6 @@ import { ThemedView } from '@/components/themed-view';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { useState, useRef, useEffect } from 'react';
 import { useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -32,7 +31,6 @@ const PHASES: Phase[] = [
 export default function BreathScreen() {
   const { width } = useWindowDimensions();
   const SQUARE_SIZE = Math.min(width * 0.7, 300);
-  const insets = useSafeAreaInsets();
 
   const [phaseIndex, setPhaseIndex] = useState(-1);
   const [time, setTime] = useState(0);
@@ -159,7 +157,7 @@ export default function BreathScreen() {
     <ParallaxScrollView headerBackgroundColor={{ light: 'transparent', dark: 'transparent' }}>
       {/* no local GridBackground here anymore — the global one in app/_layout.tsx shows through */}
       <ThemedView style={[styles.container, styles.transparent]}>
-        <View style={[styles.content, { paddingTop: 40 + insets.top }]}>
+        <View style={styles.content}>
           <Animated.Text style={[styles.timerText, animatedTimerStyle]}>
             {isRunning ? `${time}s` : ' '}
           </Animated.Text>
