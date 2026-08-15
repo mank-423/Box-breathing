@@ -79,16 +79,17 @@ export default function BreathScreen() {
   const progressValues = [topProgress, rightProgress, bottomProgress, leftProgress];
 
   const resetAllProgress = () => {
-    topProgress.value = withTiming(0, { duration: 300 });
-    rightProgress.value = withTiming(0, { duration: 300 });
-    bottomProgress.value = withTiming(0, { duration: 300 });
-    leftProgress.value = withTiming(0, { duration: 300 });
+    topProgress.value = withTiming(0, { duration: 400 });
+    rightProgress.value = withTiming(0, { duration: 400 });
+    bottomProgress.value = withTiming(0, { duration: 400 });
+    leftProgress.value = withTiming(0, { duration: 400 });
   };
 
   const runPhase = (index: number, cycle: number) => {
     if (index >= PHASES.length) {
       const newCycle = cycle + 1;
       setCycleCount(newCycle);
+      resetAllProgress();
 
       if (newCycle >= TOTAL_CYCLES) {
         if (intervalRef.current) clearInterval(intervalRef.current);
@@ -247,47 +248,47 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 4,
+    height: 6,
   },
   rightBar: {
     right: 0,
     top: 0,
     bottom: 0,
-    width: 4,
+    width: 6,
   },
   bottomBar: {
     bottom: 0,
     left: 0,
     right: 0,
-    height: 4,
+    height: 6,
   },
   leftBar: {
     left: 0,
     top: 0,
     bottom: 0,
-    width: 4,
+    width: 6,
   },
   progressFillTop: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
   progressFillRight: {
     width: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
   progressFillBottom: {
     position: 'absolute',
     right: 0,
     top: 0,
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
   progressFillLeft: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     width: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
   btn: {
     borderWidth: 4,
