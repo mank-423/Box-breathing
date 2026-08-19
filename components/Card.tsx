@@ -1,8 +1,10 @@
 import { StyleSheet, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CardProp } from '@/types/HomeScreen';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
 
-const Card = ({ title, count, onChange, url }: CardProp) => {
+const Card = ({ title, count, onChange, url, colors }: CardProp) => {
   const router = useRouter();
 
   const changeCount = (state: number) => {
@@ -25,15 +27,21 @@ const Card = ({ title, count, onChange, url }: CardProp) => {
     <Pressable 
       style={styles.card} 
       onPress={handleCardPress}
-      disabled={!url} // Disable if no URL
+      disabled={!url}
     >
+      <LinearGradient
+        colors={colors as [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+
       <Text style={styles.title}>{title}</Text>
 
       <View style={styles.controls}>
         <Pressable 
           style={styles.button} 
           onPress={() => changeCount(0)}
-          // Stop propagation so clicking button doesn't navigate
         >
           <Text style={styles.buttonText}>−</Text>
         </Pressable>
@@ -54,21 +62,24 @@ const Card = ({ title, count, onChange, url }: CardProp) => {
 const styles = StyleSheet.create({
   card: {
     padding: 16,
-    backgroundColor: 'black',
     borderRadius: 12,
     marginVertical: 8,
+    overflow: 'hidden', // ✅ Added to clip gradient
+    position: 'relative',
   },
   title: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
+    zIndex: 1,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 20,
+    zIndex: 1,
   },
   button: {
     padding: 12,

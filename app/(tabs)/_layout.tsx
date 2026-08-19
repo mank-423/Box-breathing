@@ -21,14 +21,21 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="breath"
+        name="box"
         options={{
-          title: 'Breathe',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart" size={size} color={color} />
-          ),
+          title: 'Box breathing',
+          href: null,
         }}
       />
+
+      <Tabs.Screen
+        name="sigh"
+        options={{
+          title: 'Sigh breathing',
+          href: null,
+        }}
+      />
+
     </Tabs>
   );
 }

@@ -3,4 +3,5 @@ export type CardProp = {
     count: number;
     onChange: (count: number) => void;
     url?: string;
+    colors: string[];
 }

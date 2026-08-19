@@ -7,26 +7,30 @@ import Card from '@/components/Card';
 import useStore from '@/store/zustand-store';
 
 export default function HomeScreen() {
-  const { 
-    boxBreathingState, 
-    setBreathingState
+  const {
+    boxBreathingState,
+    setBreathingState,
+    sighBreathingState, 
+    setSighBreathingState
   } = useStore();
 
   const breathingTechniques = [
-    { 
-      id: 1, 
-      title: 'Box Breathing', 
-      count: boxBreathingState, 
+    {
+      id: 1,
+      title: 'Box Breathing',
+      count: boxBreathingState,
       setter: setBreathingState,
-      url: '/breath' 
+      url: '/box',
+      colors: ['#667eea', '#764ba2']
     },
-    { 
-      id: 2, 
-      title: 'Sigh Breathing', 
-      count: 2, 
-      setter: ()=> {},
-      url: '/breath/sigh'
-    },
+    {
+      id: 2,
+      title: 'Sigh Breathing',
+      count: sighBreathingState,
+      setter: setSighBreathingState,
+      url: '/sigh',
+      colors: ['#f093fb', '#f5576c']
+    }
   ];
 
   return (
@@ -41,23 +45,16 @@ export default function HomeScreen() {
       <View style={styles.grid}>
         {breathingTechniques.map((technique) => (
           <View key={technique.id} style={styles.gridItem}>
-            <Card 
+            <Card
               title={technique.title}
               count={technique.count}
               onChange={technique.setter}
-              url={technique.url} // ✅ Pass the URL
+              url={technique.url}
+              colors={technique.colors}
             />
           </View>
         ))}
       </View>
-
-      <ThemedView style={[styles.titleContainer, styles.transparent]}>
-        <Link href="/breath" asChild>
-          <Button>
-            Go for activity
-          </Button>
-        </Link>
-      </ThemedView>
     </ParallaxScrollView>
   );
 }
@@ -79,14 +76,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   grid: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     gap: 12,
   },
   gridItem: {
-    width: '48%',
+    width: '100%',
   },
   titleContainer: {
     flexDirection: 'row',
