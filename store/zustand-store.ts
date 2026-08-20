@@ -2,16 +2,20 @@ import { create } from 'zustand';
 
 type Store = {
   boxBreathingState: number;
-  setBreathingState: (count: number) => void;
-  sighBreathingState: number,
+  sighBreathingState: number;
+  fourSevenEightState: number;
+  setBoxBreathingState: (count: number) => void;
   setSighBreathingState: (count: number) => void;
+  setFourSevenEightState: (count: number) => void;
 };
 
 const useStore = create<Store>((set) => ({
   boxBreathingState: 1,
-  setBreathingState: (count: number) => set({ boxBreathingState: count }),
   sighBreathingState: 1,
+  fourSevenEightState: 1,
+  setBoxBreathingState: (count: number) => set({ boxBreathingState: count }),
   setSighBreathingState: (count: number) => set({ sighBreathingState: count }),
+  setFourSevenEightState: (count: number) => set({ fourSevenEightState: count }),
 }));
 
 export default useStore;

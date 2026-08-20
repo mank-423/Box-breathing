@@ -1,6 +1,4 @@
 import { StyleSheet, View, Pressable, Text } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { useState, useRef, useEffect } from 'react';
 import { useWindowDimensions } from 'react-native';
 import Animated, {
@@ -11,8 +9,10 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
+import useStore from '@/store/zustand-store';
 
-const TOTAL_CYCLES = 4; // number of times to repeat the full sequence
+const TOTAL_CYCLES = 4;
 
 type Phase = {
   label: string;
@@ -28,15 +28,18 @@ const PHASES: Phase[] = [
   { label: 'HOLD', message: 'Hold', color: '#9B59B6', duration: 5 },
 ];
 
-export default function BreathScreen() {
+export default function Box() {
   const { width } = useWindowDimensions();
   const SQUARE_SIZE = Math.min(width * 0.7, 300);
+
+  const { boxBreathingState } = useStore();
 
   const [phaseIndex, setPhaseIndex] = useState(-1);
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [cycleCount, setCycleCount] = useState(0);
   const intervalRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null); // ✅ For countdown intervals
 
   const buttonScale = useSharedValue(1);
   const timerScale = useSharedValue(1);
@@ -57,6 +60,33 @@ export default function BreathScreen() {
   const rightStyle = useAnimatedStyle(() => ({ height: `${rightProgress.value * 100}%` }));
   const bottomStyle = useAnimatedStyle(() => ({ width: `${bottomProgress.value * 100}%` }));
   const leftStyle = useAnimatedStyle(() => ({ height: `${leftProgress.value * 100}%` }));
+
+  // ✅ Clean up all intervals and timeouts
+  const cleanup = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  // ✅ Reset everything
+  const resetAll = () => {
+    cleanup();
+    setIsRunning(false);
+    setPhaseIndex(-1);
+    setTime(0);
+    setCycleCount(0);
+    topProgress.value = withTiming(0, { duration: 100 });
+    rightProgress.value = withTiming(0, { duration: 100 });
+    bottomProgress.value = withTiming(0, { duration: 100 });
+    leftProgress.value = withTiming(0, { duration: 100 });
+    buttonScale.value = withTiming(1);
+    timerScale.value = withTiming(1);
+  };
 
   useEffect(() => {
     if (isRunning) {
@@ -91,14 +121,8 @@ export default function BreathScreen() {
       setCycleCount(newCycle);
       resetAllProgress();
 
-      if (newCycle >= TOTAL_CYCLES) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        setIsRunning(false);
-        setPhaseIndex(-1);
-        setTime(0);
-        resetAllProgress();
-        setCycleCount(0);
+      if (newCycle >= boxBreathingState) {
+        resetAll();
         return;
       }
 
@@ -121,8 +145,7 @@ export default function BreathScreen() {
       countdown--;
       setTime(countdown);
       if (countdown <= 0) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        intervalRef.current = null;
+        cleanup();
         runPhase(index + 1, cycle);
       }
     }, 1000);
@@ -130,6 +153,7 @@ export default function BreathScreen() {
 
   const onClick = () => {
     if (isRunning) return;
+    resetAll();
     setIsRunning(true);
     setCycleCount(0);
     topProgress.value = 0;
@@ -139,9 +163,10 @@ export default function BreathScreen() {
     runPhase(0, 0);
   };
 
+  // ✅ Clean up when component unmounts
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      resetAll();
     };
   }, []);
 
@@ -151,72 +176,66 @@ export default function BreathScreen() {
 
   const getCycleText = () => {
     if (!isRunning) return '';
-    return `Cycle ${cycleCount + 1}/${TOTAL_CYCLES}`;
+    return `Cycle ${cycleCount + 1}/${boxBreathingState}`;
   };
 
   return (
-    <ParallaxScrollView headerBackgroundColor={{ light: 'transparent', dark: 'transparent' }}>
-      {/* no local GridBackground here anymore — the global one in app/_layout.tsx shows through */}
-      <ThemedView style={[styles.container, styles.transparent]}>
-        <View style={styles.content}>
-          <Animated.Text style={[styles.timerText, animatedTimerStyle]}>
-            {isRunning ? `${time}s` : ' '}
-          </Animated.Text>
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <Animated.Text style={[Fonts.timer, animatedTimerStyle]}>
+          {isRunning ? `${time}s` : ' '}
+        </Animated.Text>
 
-          <View style={[styles.squareContainer, { width: SQUARE_SIZE, height: SQUARE_SIZE }]}>
-            <View style={[styles.progressBar, styles.topBar]}>
-              <Animated.View
-                style={[styles.progressFillTop, topStyle, { backgroundColor: PHASES[0].color }]}
-              />
-            </View>
-
-            <View style={[styles.progressBar, styles.rightBar]}>
-              <Animated.View
-                style={[styles.progressFillRight, rightStyle, { backgroundColor: PHASES[1].color }]}
-              />
-            </View>
-
-            <View style={[styles.progressBar, styles.bottomBar]}>
-              <Animated.View
-                style={[styles.progressFillBottom, bottomStyle, { backgroundColor: PHASES[2].color }]}
-              />
-            </View>
-
-            <View style={[styles.progressBar, styles.leftBar]}>
-              <Animated.View
-                style={[styles.progressFillLeft, leftStyle, { backgroundColor: PHASES[3].color }]}
-              />
-            </View>
-
-            <Pressable
-              style={[styles.btn, { borderColor: color, width: SQUARE_SIZE * 0.6, height: SQUARE_SIZE * 0.6, borderRadius: SQUARE_SIZE * 0.3 }]}
-              onPress={onClick}
-              disabled={isRunning}
-            >
-              <Animated.Text style={[styles.btnText, animatedButtonStyle, { fontSize: Math.min(SQUARE_SIZE * 0.1, 28) }]}>
-                {label}
-              </Animated.Text>
-              {!isRunning && <Text style={styles.subText}>Tap to start</Text>}
-              {isRunning && current && <Text style={styles.subText}>{current.message}</Text>}
-              {isRunning && (
-                <Text style={[styles.subText, { color: 'rgba(255,255,255,0.3)', marginTop: 2 }]}>
-                  {getCycleText()}
-                </Text>
-              )}
-            </Pressable>
+        <View style={[styles.squareContainer, { width: SQUARE_SIZE, height: SQUARE_SIZE }]}>
+          <View style={[styles.progressBar, styles.topBar]}>
+            <Animated.View
+              style={[styles.progressFillTop, topStyle, { backgroundColor: PHASES[0].color }]}
+            />
           </View>
+
+          <View style={[styles.progressBar, styles.rightBar]}>
+            <Animated.View
+              style={[styles.progressFillRight, rightStyle, { backgroundColor: PHASES[1].color }]}
+            />
+          </View>
+
+          <View style={[styles.progressBar, styles.bottomBar]}>
+            <Animated.View
+              style={[styles.progressFillBottom, bottomStyle, { backgroundColor: PHASES[2].color }]}
+            />
+          </View>
+
+          <View style={[styles.progressBar, styles.leftBar]}>
+            <Animated.View
+              style={[styles.progressFillLeft, leftStyle, { backgroundColor: PHASES[3].color }]}
+            />
+          </View>
+
+          <Pressable
+            style={[styles.btn, { borderColor: color, width: SQUARE_SIZE * 0.6, height: SQUARE_SIZE * 0.6, borderRadius: SQUARE_SIZE * 0.3 }]}
+            onPress={onClick}
+            disabled={isRunning}
+          >
+            <Animated.Text style={[styles.btnText, animatedButtonStyle, { fontSize: Math.min(SQUARE_SIZE * 0.1, 28) }]}>
+              {label}
+            </Animated.Text>
+            {!isRunning && <Text style={styles.subText}>Tap to start</Text>}
+            {isRunning && current && <Text style={styles.subText}>{current.message}</Text>}
+            {isRunning && (
+              <Text style={[styles.subText, { color: 'rgba(255,255,255,0.3)', marginTop: 2 }]}>
+                {getCycleText()}
+              </Text>
+            )}
+          </Pressable>
         </View>
-      </ThemedView>
-    </ParallaxScrollView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: 'relative',
-  },
-  transparent: {
     backgroundColor: 'transparent',
   },
   content: {
@@ -225,13 +244,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 40,
-  },
-  timerText: {
-    fontSize: 64,
-    fontWeight: '200',
-    color: 'rgba(255,255,255,0.85)',
-    fontVariant: ['tabular-nums'],
-    marginBottom: 30,
   },
   squareContainer: {
     justifyContent: 'center',

@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import useStore from '@/store/zustand-store';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
 
 const Sigh = () => {
     const states = [
@@ -9,74 +10,98 @@ const Sigh = () => {
         { title: 'Breathe Out', duration: 5 }
     ];
 
-
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentCycle, setCurrentCycle] = useState(1);
     const [currentStateCount, setCurrentStateCount] = useState(0);
     const [isRunning, setIsRunning] = useState(false);
     const intervalRef = useRef<number | null>(null);
+    const timeoutRef = useRef<number | null>(null);
+    const countdownRef = useRef<number | null>(null);
     const { sighBreathingState, setSighBreathingState } = useStore();
 
-    const runStep = (index: number, cycle: number) => {
-        // Check if all cycles complete
-        if (cycle > sighBreathingState) {
-            setIsRunning(false);
-            setCurrentIndex(0);
-            setCurrentCycle(1);
-            setCurrentStateCount(0);
-            clearInterval(intervalRef.current!);
+    // ✅ Clean up everything
+    const cleanup = () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
             intervalRef.current = null;
+        }
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+        if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+        }
+    };
+
+    // ✅ Reset everything
+    const resetAll = () => {
+        cleanup();
+        setIsRunning(false);
+        setCurrentIndex(0);
+        setCurrentCycle(1);
+        setCurrentStateCount(0);
+    };
+
+    const runStep = (index: number, cycle: number) => {
+        // Check if component is unmounted or should stop
+        if (!isRunning) {
+            resetAll();
             return;
         }
 
-        // Check if current cycle complete
+        if (cycle > sighBreathingState) {
+            resetAll();
+            return;
+        }
+
         if (index >= states.length) {
-            // Move to next cycle
             setCurrentCycle(cycle + 1);
-            // Start next cycle after 1 second pause
-            clearInterval(intervalRef.current!);
-            intervalRef.current = setTimeout(() => {
-                runStep(0, cycle + 1);
+            cleanup();
+            timeoutRef.current = setTimeout(() => {
+                if (isRunning) {
+                    runStep(0, cycle + 1);
+                }
             }, 1000) as any;
             return;
         }
 
-        // Run current step
         setCurrentIndex(index);
         const duration = states[index].duration;
         setCurrentStateCount(duration);
 
-        // Countdown timer
         let countdown = duration;
-        const countdownInterval = setInterval(() => {
+        countdownRef.current = setInterval(() => {
             countdown--;
             setCurrentStateCount(countdown);
         }, 1000);
 
-        // Set timeout for this step
-        intervalRef.current = setTimeout(() => {
-            clearInterval(countdownInterval);
-            runStep(index + 1, cycle);
+        cleanup();
+        timeoutRef.current = setTimeout(() => {
+            if (countdownRef.current) {
+                clearInterval(countdownRef.current);
+                countdownRef.current = null;
+            }
+            if (isRunning) {
+                runStep(index + 1, cycle);
+            }
         }, duration * 1000) as any;
     };
 
     const onClick = () => {
         if (isRunning) return;
-        
+        resetAll();
         setIsRunning(true);
         setCurrentCycle(1);
         setCurrentIndex(0);
-        
-        // Run the first step
         runStep(0, 1);
     };
 
-    // Cleanup on unmount
+    // ✅ Clean up on unmount
     useEffect(() => {
         return () => {
-            if (intervalRef.current) {
-                clearTimeout(intervalRef.current);
-            }
+            resetAll();
         };
     }, []);
 
@@ -84,24 +109,22 @@ const Sigh = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.cycleText}>
-                Cycle {currentCycle}/{sighBreathingState}
+            <Text style={Fonts.timer}>
+                {isRunning ? `${currentStateCount}s` : ' '}
             </Text>
-            
-            <Text style={styles.titleText}>
-                {currentState.title}
-            </Text>
-            
-            <View style={styles.timerContainer}>
-                {currentStateCount > 0 && (
-                    <Text style={styles.timerText}>
-                        {currentStateCount}s
-                    </Text>
-                )}
+
+            <View style={styles.centerContent}>
+                <Text style={styles.titleText}>
+                    {currentState.title}
+                </Text>
+
+                <Text style={styles.cycleText}>
+                    Cycle {currentCycle}/{sighBreathingState}
+                </Text>
             </View>
 
-            <Pressable 
-                style={[styles.button, isRunning && styles.buttonDisabled]} 
+            <Pressable
+                style={[styles.button, isRunning && styles.buttonDisabled]}
                 onPress={onClick}
                 disabled={isRunning}
             >
@@ -118,33 +141,27 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#000',
-        padding: 20,
+        backgroundColor: 'transparent',
+        padding: Spacing.lg,
     },
-    cycleText: {
-        color: 'rgba(255,255,255,0.5)',
-        fontSize: 16,
-        marginBottom: 20,
+    centerContent: {
+        alignItems: 'center',
+        marginVertical: Spacing.xl,
     },
     titleText: {
-        color: 'white',
-        fontSize: 32,
-        fontWeight: '600',
+        ...Fonts.title,
+        fontSize: 28,
+        marginBottom: Spacing.md,
         textAlign: 'center',
-        marginBottom: 20,
     },
-    timerContainer: {
-        marginBottom: 40,
-    },
-    timerText: {
-        color: '#4A90D9',
-        fontSize: 48,
-        fontWeight: '200',
+    cycleText: {
+        ...Fonts.cycle,
+        marginTop: Spacing.sm,
     },
     button: {
-        paddingHorizontal: 40,
-        paddingVertical: 15,
-        backgroundColor: '#4A90D9',
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.md,
+        backgroundColor: Colors.primary,
         borderRadius: 12,
         minWidth: 120,
         alignItems: 'center',
@@ -153,7 +170,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.2)',
     },
     buttonText: {
-        color: 'white',
+        color: Colors.white,
         fontSize: 18,
         fontWeight: '600',
     },

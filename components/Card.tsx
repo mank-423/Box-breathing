@@ -2,9 +2,9 @@ import { StyleSheet, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CardProp } from '@/types/HomeScreen';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { Colors, Fonts, Spacing, BorderRadius } from '@/constants/theme';
 
-const Card = ({ title, count, onChange, url, colors }: CardProp) => {
+const Card = ({ title, description, count, onChange, url, colors }: CardProp) => {
   const router = useRouter();
 
   const changeCount = (state: number) => {
@@ -23,37 +23,49 @@ const Card = ({ title, count, onChange, url, colors }: CardProp) => {
     }
   };
 
+  const gradientColors = colors || ['#667eea', '#764ba2'];
+
   return (
-    <Pressable 
-      style={styles.card} 
+    <Pressable
+      style={styles.card}
       onPress={handleCardPress}
       disabled={!url}
     >
       <LinearGradient
-        colors={colors as [string, string, ...string[]]}
+        colors={gradientColors as [string, string, ...string[]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
 
-      <Text style={styles.title}>{title}</Text>
+      <View style={styles.cardContent}>
+        <View style={styles.textSection}>
+          <Text style={styles.title}>{title}</Text>
+          {description && (
+            <Text style={styles.description}>{description}</Text>
+          )}
+        </View>
 
-      <View style={styles.controls}>
-        <Pressable 
-          style={styles.button} 
-          onPress={() => changeCount(0)}
-        >
-          <Text style={styles.buttonText}>−</Text>
-        </Pressable>
+        <View style={styles.controls}>
+          <Pressable
+            style={styles.button}
+            onPress={() => changeCount(0)}
+          >
+            <Text style={styles.buttonText}>−</Text>
+          </Pressable>
 
-        <Text style={styles.count}>{count}</Text>
+          <View style={styles.countContainer}>
+            <Text style={styles.count}>{count}</Text>
+            <Text style={styles.countLabel}>cycles</Text>
+          </View>
 
-        <Pressable 
-          style={styles.button} 
-          onPress={() => changeCount(1)}
-        >
-          <Text style={styles.buttonText}>+</Text>
-        </Pressable>
+          <Pressable
+            style={styles.button}
+            onPress={() => changeCount(1)}
+          >
+            <Text style={styles.buttonText}>+</Text>
+          </Pressable>
+        </View>
       </View>
     </Pressable>
   );
@@ -61,44 +73,55 @@ const Card = ({ title, count, onChange, url, colors }: CardProp) => {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    borderRadius: 12,
-    marginVertical: 8,
-    overflow: 'hidden', // ✅ Added to clip gradient
+    borderRadius: BorderRadius.md,
+    marginVertical: Spacing.sm,
+    overflow: 'hidden',
     position: 'relative',
   },
+  cardContent: {
+    padding: Spacing.md,
+  },
+  textSection: {
+    marginBottom: Spacing.md,
+  },
   title: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-    zIndex: 1,
+    ...Fonts.subtitle,
+    fontSize: 20,
+  },
+  description: {
+    ...Fonts.body,
+    fontSize: 14,
+    marginTop: Spacing.xs,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-    zIndex: 1,
+    justifyContent: 'space-between',
   },
   button: {
-    padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    minWidth: 44,
+    padding: Spacing.md,
+    backgroundColor: Colors.grayLight,
+    borderRadius: BorderRadius.sm,
+    minWidth: 48,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 24,
     fontWeight: '300',
   },
+  countContainer: {
+    alignItems: 'center',
+  },
   count: {
-    color: '#ffffff',
-    fontSize: 24,
+    color: Colors.white,
+    fontSize: 28,
     fontWeight: '600',
-    minWidth: 30,
-    textAlign: 'center',
+  },
+  countLabel: {
+    ...Fonts.label,
+    fontSize: 10,
+    textTransform: 'uppercase',
   },
 });
 
