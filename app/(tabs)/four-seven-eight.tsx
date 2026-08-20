@@ -1,5 +1,5 @@
 import { StyleSheet, View, Text, Pressable } from 'react-native';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import useStore from '@/store/zustand-store';
 import { Fonts } from '@/constants/theme';
 import BreathingContainer from '@/components/BreathingContainer';
@@ -7,14 +7,56 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withRepeat,
+  withSequence,
   Easing,
 } from 'react-native-reanimated';
 
+// High-contrast neon colors to pop against deep indigo wave background:
+// Electric Cyan (Breathe In) -> Amber Gold (Hold) -> Neon Pink (Breathe Out)
 const states = [
-  { title: 'Breathe In', duration: 4, message: 'Inhale slowly through your nose', color: '#6C5CE7' },
-  { title: 'Hold', duration: 7, message: 'Hold your breath gently', color: '#F39C12' },
-  { title: 'Breathe Out', duration: 8, message: 'Exhale slowly through your mouth', color: '#A29BFE' },
+  { title: 'Breathe In', duration: 4, message: 'Inhale slowly through your nose', color: '#00F2FE' },
+  { title: 'Hold', duration: 7, message: 'Hold your breath gently', color: '#FFD700' },
+  { title: 'Breathe Out', duration: 8, message: 'Exhale slowly through your mouth', color: '#FF007F' },
 ];
+
+// Floating particle dot moving vertically in parallel
+const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: number; delay: number; color: string }) => {
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withRepeat(
+      withSequence(
+        withTiming(-8, { duration: 1500 + delay, easing: Easing.inOut(Easing.ease) }),
+        withTiming(8, { duration: 1500 + delay, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [delay]);
+
+  const animatedDotStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const x = Math.cos(angle) * radius;
+  const y = Math.sin(angle) * radius;
+
+  return (
+    <Animated.View
+      style={[
+        styles.dot,
+        {
+          left: 110 + x - 3,
+          top: 110 + y - 3,
+          backgroundColor: color,
+          shadowColor: color,
+        },
+        animatedDotStyle,
+      ]}
+    />
+  );
+};
 
 export default function FourSevenEight() {
   const { fourSevenEightState } = useStore();
@@ -28,11 +70,26 @@ export default function FourSevenEight() {
 
   // Shared animated values
   const circleScale = useSharedValue(1);
+  const particleScale = useSharedValue(1);
+
+  // Generate particle coordinates outside main circle
+  const particles = useMemo(() => {
+    const list = [];
+    const count = 36;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * 2 * Math.PI;
+      const radius = 86 + (i % 3) * 8;
+      const delay = (i % 6) * 150;
+      list.push({ id: i, angle, radius, delay });
+    }
+    return list;
+  }, []);
 
   // Animate size based on current 4-7-8 phase
   useEffect(() => {
     if (!isRunning || currentIndex === -1) {
       circleScale.value = withTiming(1, { duration: 500 });
+      particleScale.value = withTiming(1, { duration: 500 });
       return;
     }
 
@@ -41,20 +98,27 @@ export default function FourSevenEight() {
     switch (currentIndex) {
       case 0: // BREATHE IN (4s) -> Smooth expansion
         circleScale.value = withTiming(1.35, { duration: durationMs, easing: Easing.out(Easing.ease) });
+        particleScale.value = withTiming(1.28, { duration: durationMs, easing: Easing.out(Easing.ease) });
         break;
 
       case 1: // HOLD (7s) -> Maintain size
         circleScale.value = 1.35;
+        particleScale.value = 1.28;
         break;
 
       case 2: // BREATHE OUT (8s) -> Slow, complete contraction
         circleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
+        particleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
         break;
     }
   }, [currentIndex, isRunning]);
 
   const animatedCircleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: circleScale.value }],
+  }));
+
+  const animatedParticleContainerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: particleScale.value }],
   }));
 
   const cleanup = useCallback(() => {
@@ -75,6 +139,7 @@ export default function FourSevenEight() {
     setCurrentCycle(1);
     setCurrentStateCount(0);
     circleScale.value = withTiming(1, { duration: 400 });
+    particleScale.value = withTiming(1, { duration: 400 });
   }, [cleanup]);
 
   const runStep = useCallback((index: number, cycle: number) => {
@@ -124,7 +189,7 @@ export default function FourSevenEight() {
   }, [cleanup]);
 
   const current = currentIndex >= 0 ? states[currentIndex] : null;
-  const currentColor = current?.color || '#6C5CE7';
+  const currentColor = current?.color || '#00F2FE';
   const statusText = isRunning ? (current?.message || '') : 'Tap GO to start';
   const cycleText = isRunning ? `Cycle ${currentCycle}/${fourSevenEightState}` : '';
 
@@ -137,7 +202,7 @@ export default function FourSevenEight() {
       cycleText={cycleText}
       statusText={statusText}
       showButton={false}
-      phaseColors={['#6C5CE7', '#A29BFE']}
+      phaseColors={['#00F2FE', '#FFD700', '#FF007F']}
     >
       <Pressable 
         style={styles.circleWrapper} 
@@ -145,13 +210,26 @@ export default function FourSevenEight() {
         disabled={isRunning}
         hitSlop={15}
       >
-        {/* Simple outlined circular border */}
+        {/* Parallel floating dots ring */}
+        <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
+          {particles.map((p) => (
+            <FloatingDot
+              key={p.id}
+              angle={p.angle}
+              radius={p.radius}
+              delay={p.delay}
+              color={currentColor}
+            />
+          ))}
+        </Animated.View>
+
+        {/* Thick bold animated circular border */}
         <Animated.View 
           pointerEvents="none" 
           style={[
-            styles.circle, 
+            styles.animatedCircle, 
             animatedCircleStyle,
-            { borderColor: currentColor }
+            { borderColor: currentColor, shadowColor: currentColor }
           ]} 
         />
 
@@ -176,23 +254,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  circle: {
+  particleField: {
+    width: 220,
+    height: 220,
+    position: 'absolute',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    position: 'absolute',
+    opacity: 0.95,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  animatedCircle: {
     width: 140,
     height: 140,
     borderRadius: 70,
-    borderWidth: 2,
+    borderWidth: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 8,
   },
   phaseLabel: {
     ...Fonts.subtitle,
     fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 1.2,
     zIndex: 2,
     color: '#FFFFFF',
     textAlign: 'center',
     paddingHorizontal: 16,
     maxWidth: 160,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
 });

@@ -1,12 +1,9 @@
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, Image, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BreathingImages } from '@/constants/images';
 
 const CELL_SIZE = 36;
 
-/**
- * Full-screen dark grid background. Rendered ONCE in app/_layout.tsx,
- * behind the navigator, so it's consistent across every screen.
- */
 export default function GridBackground() {
   const { width, height } = useWindowDimensions();
   const cols = Math.ceil(width / CELL_SIZE) + 1;
@@ -14,13 +11,17 @@ export default function GridBackground() {
 
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000000' }]} />
-      <LinearGradient
-        colors={['#0c0c12', '#000000', '#000000']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+      {/* 1. Base Background Image */}
+      <Image
+        source={BreathingImages.phoneBg}
         style={StyleSheet.absoluteFillObject}
+        resizeMode="contain"
       />
+
+      {/* 2. Soft dark overlay to ensure readability */}
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
+
+      {/* 3. Grid Lines rendered ON TOP of the image */}
       {Array.from({ length: cols }).map((_, i) => (
         <View
           key={`v-${i}`}
@@ -30,7 +31,7 @@ export default function GridBackground() {
             top: 0,
             bottom: 0,
             width: 1,
-            backgroundColor: 'rgba(255,255,255,0.06)',
+            backgroundColor: 'rgba(255,255,255,0.08)',
           }}
         />
       ))}
@@ -43,20 +44,16 @@ export default function GridBackground() {
             left: 0,
             right: 0,
             height: 1,
-            backgroundColor: 'rgba(255,255,255,0.06)',
+            backgroundColor: 'rgba(255,255,255,0.08)',
           }}
         />
       ))}
+
+      {/* 4. Soft Edge Vignette */}
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.9)']}
-        start={{ x: 0.5, y: 0.3 }}
+        colors={['transparent', 'rgba(0,0,0,0.6)']}
+        start={{ x: 0.5, y: 0.4 }}
         end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <LinearGradient
-        colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.6)']}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
         style={StyleSheet.absoluteFillObject}
       />
     </View>

@@ -13,14 +13,15 @@ import { Fonts } from '@/constants/theme';
 import useStore from '@/store/zustand-store';
 import BreathingContainer from '@/components/BreathingContainer';
 
+// High-contrast vibrant colors that pop against deep indigo wave patterns:
+// Cyan (Inhale) -> Gold/Amber (Hold) -> Neon Pink (Exhale) -> Coral Gold (Hold)
 const PHASES = [
-  { label: 'BREATHE IN', message: 'Inhale deeply', color: '#4A90D9', duration: 4 },
-  { label: 'HOLD', message: 'Hold your breath', color: '#F39C12', duration: 4 },
-  { label: 'BREATHE OUT', message: 'Exhale slowly', color: '#E74C3C', duration: 4 },
-  { label: 'HOLD', message: 'Hold your breath', color: '#9B59B6', duration: 4 },
+  { label: 'BREATHE IN', message: 'Inhale deeply', color: '#00F2FE', duration: 4 },
+  { label: 'HOLD', message: 'Hold your breath', color: '#FFD700', duration: 4 },
+  { label: 'BREATHE OUT', message: 'Exhale slowly', color: '#FF007F', duration: 4 },
+  { label: 'HOLD', message: 'Hold your breath', color: '#FF8C00', duration: 4 },
 ];
 
-// Individual floating particle dot moving vertically
 const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: number; delay: number; color: string }) => {
   const translateY = useSharedValue(0);
 
@@ -36,12 +37,9 @@ const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: n
   }, [delay]);
 
   const animatedDotStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: translateY.value }
-    ],
+    transform: [{ translateY: translateY.value }],
   }));
 
-  // Calculate polar positions around the center
   const x = Math.cos(angle) * radius;
   const y = Math.sin(angle) * radius;
 
@@ -50,9 +48,10 @@ const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: n
       style={[
         styles.dot,
         {
-          left: 110 + x - 2,
-          top: 110 + y - 2,
+          left: 110 + x - 3,
+          top: 110 + y - 3,
           backgroundColor: color,
+          shadowColor: color,
         },
         animatedDotStyle,
       ]}
@@ -71,25 +70,21 @@ export default function Box() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Reanimated shared values
   const circleScale = useSharedValue(1);
   const particleScale = useSharedValue(1);
 
-  // Generate particle positions outside the circle boundary
   const particles = useMemo(() => {
     const list = [];
     const count = 36;
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * 2 * Math.PI;
-      // Stagger radius slightly between 82 and 100 for natural halo ring effect
-      const radius = 84 + (i % 3) * 8; 
+      const radius = 86 + (i % 3) * 8; 
       const delay = (i % 6) * 150;
       list.push({ id: i, angle, radius, delay });
     }
     return list;
   }, []);
 
-  // Sync size scale with current breathing phase
   useEffect(() => {
     if (!isRunning || phaseIndex === -1) {
       circleScale.value = withTiming(1, { duration: 500 });
@@ -100,22 +95,19 @@ export default function Box() {
     const durationMs = PHASES[phaseIndex].duration * 1000;
 
     switch (phaseIndex) {
-      case 0: // BREATHE IN
+      case 0:
         circleScale.value = withTiming(1.3, { duration: durationMs, easing: Easing.out(Easing.ease) });
         particleScale.value = withTiming(1.25, { duration: durationMs, easing: Easing.out(Easing.ease) });
         break;
-
-      case 1: // HOLD
+      case 1:
         circleScale.value = 1.3;
         particleScale.value = 1.25;
         break;
-
-      case 2: // BREATHE OUT
+      case 2:
         circleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
         particleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
         break;
-
-      case 3: // HOLD
+      case 3:
         circleScale.value = 1;
         particleScale.value = 1;
         break;
@@ -198,7 +190,7 @@ export default function Box() {
   }, [cleanup]);
 
   const current = phaseIndex >= 0 ? PHASES[phaseIndex] : null;
-  const currentColor = current?.color || '#4A90D9';
+  const currentColor = current?.color || '#00F2FE';
   const statusText = isRunning ? (current?.message || '') : 'Tap GO to start';
   const cycleText = isRunning ? `Cycle ${cycleCount + 1}/${boxBreathingState}` : '';
 
@@ -211,7 +203,7 @@ export default function Box() {
       cycleText={cycleText}
       statusText={statusText}
       showButton={false}
-      phaseColors={['#4A90D9', '#F39C12', '#E74C3C', '#9B59B6']}
+      phaseColors={['#00F2FE', '#FFD700', '#FF007F', '#FF8C00']}
     >
       <Pressable 
         style={styles.circleWrapper} 
@@ -219,7 +211,7 @@ export default function Box() {
         disabled={isRunning}
         hitSlop={15}
       >
-        {/* Floating particles ring outside the central circle */}
+        {/* Floating particles ring */}
         <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
           {particles.map((p) => (
             <FloatingDot 
@@ -232,13 +224,13 @@ export default function Box() {
           ))}
         </Animated.View>
 
-        {/* Solid inner outline ring */}
+        {/* Thick Bold Animated Circle Ring */}
         <Animated.View 
           pointerEvents="none" 
           style={[
             styles.animatedCircle, 
             animatedCircleStyle,
-            { borderColor: currentColor }
+            { borderColor: currentColor, shadowColor: currentColor }
           ]}
         />
 
@@ -269,31 +261,41 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 6, // Slightly enlarged for clarity
+    height: 6,
+    borderRadius: 3,
     position: 'absolute',
-    opacity: 0.85,
+    opacity: 0.95,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
   animatedCircle: {
     width: 140,
     height: 140,
     borderRadius: 70,
-    borderWidth: 2,
+    borderWidth: 5, // Increased from 2 to 5 for a bold pop
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Dark backdrop filter so center text stays crisp
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 8,
   },
   phaseLabel: {
     ...Fonts.subtitle,
     fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 1.2,
     zIndex: 2,
     color: '#FFFFFF',
     textAlign: 'center',
     paddingHorizontal: 16,
     maxWidth: 160,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
 });
