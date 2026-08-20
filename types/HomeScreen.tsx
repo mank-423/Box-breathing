@@ -1,8 +1,11 @@
+import { ImageSourcePropType } from "react-native";
+
 export type CardProp = {
     title: string;
+    description?: string;
     count: number;
     onChange: (count: number) => void;
     url?: string;
-    colors: string[];
-    description: string;
+    image: ImageSourcePropType;
+    icon?: string;
 }

@@ -1,75 +1,73 @@
-import { StyleSheet, Pressable, Text, View } from 'react-native';
+import { StyleSheet, Pressable, Text, View, ImageBackground, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Fonts, Spacing, BorderRadius } from '@/constants/theme';
 import { CardProp } from '@/types/HomeScreen';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Fonts, Spacing, BorderRadius } from '@/constants/theme';
 
-const Card = ({ title, description, count, onChange, url, colors }: CardProp) => {
+
+export default function Card({
+  title,
+  description,
+  count,
+  onChange,
+  url,
+  image,
+  icon,
+}: CardProp) {
   const router = useRouter();
 
-  const changeCount = (state: number) => {
-    if (state === 0) {
-      const newCount = count > 0 ? count - 1 : count;
-      onChange(newCount);
-    } else {
-      const newCount = count + 1;
-      onChange(newCount);
-    }
+  const handlePress = () => {
+    if (url) router.push(url as any);
   };
-
-  const handleCardPress = () => {
-    if (url) {
-      router.push(url as any);
-    }
-  };
-
-  const gradientColors = colors || ['#667eea', '#764ba2'];
 
   return (
-    <Pressable
-      style={styles.card}
-      onPress={handleCardPress}
-      disabled={!url}
-    >
-      <LinearGradient
-        colors={gradientColors as [string, string, ...string[]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-
-      <View style={styles.cardContent}>
-        <View style={styles.textSection}>
-          <Text style={styles.title}>{title}</Text>
-          {description && (
-            <Text style={styles.description}>{description}</Text>
-          )}
-        </View>
-
-        <View style={styles.controls}>
-          <Pressable
-            style={styles.button}
-            onPress={() => changeCount(0)}
-          >
-            <Text style={styles.buttonText}>−</Text>
-          </Pressable>
-
-          <View style={styles.countContainer}>
-            <Text style={styles.count}>{count}</Text>
-            <Text style={styles.countLabel}>cycles</Text>
+    <Pressable style={styles.card} onPress={handlePress} disabled={!url}>
+      <ImageBackground
+        source={image}
+        style={styles.backgroundImage}
+        imageStyle={{ borderRadius: BorderRadius.md }}
+        resizeMode="cover"
+      >
+        <View style={styles.content}>
+          <View style={styles.textSection}>
+            {icon && <Text style={styles.icon}>{icon}</Text>}
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>{title}</Text>
+              {description && <Text style={styles.description}>{description}</Text>}
+            </View>
           </View>
 
-          <Pressable
-            style={styles.button}
-            onPress={() => changeCount(1)}
-          >
-            <Text style={styles.buttonText}>+</Text>
-          </Pressable>
+          <View style={styles.controls}>
+            <Pressable
+              style={styles.button}
+              onPress={(e) => {
+                e.stopPropagation();
+                const newCount = count > 0 ? count - 1 : count;
+                onChange(newCount);
+              }}
+            >
+              <Text style={styles.buttonText}>−</Text>
+            </Pressable>
+
+            <View style={styles.countContainer}>
+              <Text style={styles.count}>{count}</Text>
+              <Text style={styles.countLabel}>cycles</Text>
+            </View>
+
+            <Pressable
+              style={styles.button}
+              onPress={(e) => {
+                e.stopPropagation();
+                onChange(count + 1);
+              }}
+            >
+              <Text style={styles.buttonText}>+</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </ImageBackground>
     </Pressable>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {
@@ -77,21 +75,43 @@ const styles = StyleSheet.create({
     marginVertical: Spacing.sm,
     overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  cardContent: {
+  backgroundImage: {
+    width: '100%',
+  },
+  content: {
     padding: Spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)', // Subtle backdrop overlay to ensure crisp readability
   },
   textSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: Spacing.md,
+  },
+  titleContainer: {
+    flex: 1,
+  },
+  icon: {
+    fontSize: 28,
+    marginRight: Spacing.md,
+    color: '#1A1A1A', // Dark color for light background
   },
   title: {
     ...Fonts.subtitle,
-    fontSize: 20,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A', // Dark text color
   },
   description: {
     ...Fonts.body,
-    fontSize: 14,
-    marginTop: Spacing.xs,
+    fontSize: 13,
+    marginTop: 2,
+    color: '#333333', // Slightly lighter dark text for description
   },
   controls: {
     flexDirection: 'row',
@@ -99,30 +119,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   button: {
-    padding: Spacing.md,
-    backgroundColor: Colors.grayLight,
+    padding: Spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.08)', // Dark translucent button background for contrast
     borderRadius: BorderRadius.sm,
-    minWidth: 48,
+    minWidth: 44,
     alignItems: 'center',
   },
   buttonText: {
-    color: Colors.white,
+    color: '#1A1A1A',
     fontSize: 24,
-    fontWeight: '300',
+    fontWeight: '400',
   },
   countContainer: {
     alignItems: 'center',
   },
   count: {
-    color: Colors.white,
+    color: '#1A1A1A',
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   countLabel: {
     ...Fonts.label,
     fontSize: 10,
-    textTransform: 'uppercase',
+    color: '#4A4A4A',
+    fontWeight: '600',
   },
 });
-
-export default Card;

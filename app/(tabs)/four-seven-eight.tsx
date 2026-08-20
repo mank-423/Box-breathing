@@ -1,100 +1,84 @@
-import { View, Text, StyleSheet } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import useStore from '@/store/zustand-store';
+import { Fonts } from '@/constants/theme';
 import BreathingContainer from '@/components/BreathingContainer';
-import { Colors, Fonts, Spacing, BorderRadius } from '@/constants/theme';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withRepeat,
   withTiming,
-  withSequence,
+  Easing,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 
-const FourSevenEight = () => {
-  const states = [
-    { title: 'Breathe In', duration: 4, message: 'Inhale slowly through your nose' },
-    { title: 'Hold', duration: 7, message: 'Hold your breath gently' },
-    { title: 'Breathe Out', duration: 8, message: 'Exhale slowly through your mouth' },
-  ];
+const states = [
+  { title: 'Breathe In', duration: 4, message: 'Inhale slowly through your nose', color: '#6C5CE7' },
+  { title: 'Hold', duration: 7, message: 'Hold your breath gently', color: '#F39C12' },
+  { title: 'Breathe Out', duration: 8, message: 'Exhale slowly through your mouth', color: '#A29BFE' },
+];
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+export default function FourSevenEight() {
+  const { fourSevenEightState } = useStore();
+
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [currentCycle, setCurrentCycle] = useState(1);
   const [currentStateCount, setCurrentStateCount] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef<number | null>(null);
-  const timeoutRef = useRef<number | null>(null);
-  const countdownRef = useRef<number | null>(null);
-  const { fourSevenEightState, setFourSevenEightState } = useStore();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Circle animation
+  // Shared animated values
   const circleScale = useSharedValue(1);
-  const circleOpacity = useSharedValue(0.3);
 
-  // ✅ Clean up everything
-  const cleanup = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+  // Animate size based on current 4-7-8 phase
+  useEffect(() => {
+    if (!isRunning || currentIndex === -1) {
+      circleScale.value = withTiming(1, { duration: 500 });
+      return;
     }
+
+    const durationMs = states[currentIndex].duration * 1000;
+
+    switch (currentIndex) {
+      case 0: // BREATHE IN (4s) -> Smooth expansion
+        circleScale.value = withTiming(1.35, { duration: durationMs, easing: Easing.out(Easing.ease) });
+        break;
+
+      case 1: // HOLD (7s) -> Maintain size
+        circleScale.value = 1.35;
+        break;
+
+      case 2: // BREATHE OUT (8s) -> Slow, complete contraction
+        circleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
+        break;
+    }
+  }, [currentIndex, isRunning]);
+
+  const animatedCircleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: circleScale.value }],
+  }));
+
+  const cleanup = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-      countdownRef.current = null;
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
-  };
+  }, []);
 
-  // ✅ Reset everything
-  const resetAll = () => {
+  const resetAll = useCallback(() => {
     cleanup();
     setIsRunning(false);
-    setCurrentIndex(0);
+    setCurrentIndex(-1);
     setCurrentCycle(1);
     setCurrentStateCount(0);
-    circleScale.value = withTiming(1);
-    circleOpacity.value = withTiming(0.3);
-  };
+    circleScale.value = withTiming(1, { duration: 400 });
+  }, [cleanup]);
 
-  useEffect(() => {
-    if (isRunning) {
-      circleScale.value = withRepeat(
-        withSequence(
-          withTiming(1.3, { duration: 4000 }),
-          withTiming(1, { duration: 7000 }),
-          withTiming(0.7, { duration: 8000 })
-        ),
-        -1,
-        true
-      );
-      circleOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.6, { duration: 4000 }),
-          withTiming(0.3, { duration: 7000 }),
-          withTiming(0.8, { duration: 8000 })
-        ),
-        -1,
-        true
-      );
-    } else {
-      circleScale.value = withTiming(1);
-      circleOpacity.value = withTiming(0.3);
-    }
-  }, [isRunning]);
-
-  const animatedCircleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: circleScale.value }],
-    opacity: circleOpacity.value,
-  }));
-
-  const runStep = (index: number, cycle: number) => {
-    if (!isRunning) {
-      resetAll();
-      return;
-    }
+  const runStep = useCallback((index: number, cycle: number) => {
+    cleanup();
 
     if (cycle > fourSevenEightState) {
       resetAll();
@@ -102,56 +86,47 @@ const FourSevenEight = () => {
     }
 
     if (index >= states.length) {
-      setCurrentCycle(cycle + 1);
-      cleanup();
-      timeoutRef.current = setTimeout(() => {
-        if (isRunning) {
-          runStep(0, cycle + 1);
-        }
-      }, 1000) as any;
+      const nextCycle = cycle + 1;
+      setCurrentCycle(nextCycle);
+      if (nextCycle > fourSevenEightState) {
+        resetAll();
+        return;
+      }
+      timeoutRef.current = setTimeout(() => runStep(0, nextCycle), 0);
       return;
     }
 
+    const state = states[index];
     setCurrentIndex(index);
-    const duration = states[index].duration;
-    setCurrentStateCount(duration);
+    setCurrentStateCount(state.duration);
 
-    let countdown = duration;
-    countdownRef.current = setInterval(() => {
+    let countdown = state.duration;
+    intervalRef.current = setInterval(() => {
       countdown--;
       setCurrentStateCount(countdown);
     }, 1000);
 
-    cleanup();
     timeoutRef.current = setTimeout(() => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
-      if (isRunning) {
-        runStep(index + 1, cycle);
-      }
-    }, duration * 1000) as any;
-  };
+      runStep(index + 1, cycle);
+    }, state.duration * 1000);
+  }, [fourSevenEightState, cleanup, resetAll]);
 
-  const onClick = () => {
+  const onClick = useCallback(() => {
     if (isRunning) return;
     resetAll();
     setIsRunning(true);
     setCurrentCycle(1);
-    setCurrentIndex(0);
     runStep(0, 1);
-  };
+  }, [isRunning, resetAll, runStep]);
 
-  // ✅ Clean up on unmount
   useEffect(() => {
-    return () => {
-      resetAll();
-    };
-  }, []);
+    return () => cleanup();
+  }, [cleanup]);
 
-  const currentState = states[currentIndex] || states[0];
-  const totalCycles = fourSevenEightState || 4;
+  const current = currentIndex >= 0 ? states[currentIndex] : null;
+  const currentColor = current?.color || '#6C5CE7';
+  const statusText = isRunning ? (current?.message || '') : 'Tap GO to start';
+  const cycleText = isRunning ? `Cycle ${currentCycle}/${fourSevenEightState}` : '';
 
   return (
     <BreathingContainer
@@ -159,45 +134,65 @@ const FourSevenEight = () => {
       subtitle="Calm your nervous system"
       timer={currentStateCount}
       isRunning={isRunning}
-      cycleText={`Cycle ${currentCycle}/${totalCycles}`}
-      statusText={currentState.message}
-      onPress={onClick}
+      cycleText={cycleText}
+      statusText={statusText}
+      showButton={false}
+      phaseColors={['#6C5CE7', '#A29BFE']}
     >
-      <View style={styles.circleContainer}>
-        <Animated.View style={[styles.circle, animatedCircleStyle]}>
-          <LinearGradient
-            colors={['#6C5CE7', '#A29BFE']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-        </Animated.View>
-        <Text style={styles.stateText}>{currentState.title}</Text>
-      </View>
+      <Pressable 
+        style={styles.circleWrapper} 
+        onPress={onClick}
+        disabled={isRunning}
+        hitSlop={15}
+      >
+        {/* Simple outlined circular border */}
+        <Animated.View 
+          pointerEvents="none" 
+          style={[
+            styles.circle, 
+            animatedCircleStyle,
+            { borderColor: currentColor }
+          ]} 
+        />
+
+        <Text 
+          pointerEvents="none" 
+          style={styles.phaseLabel}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {current?.title || 'GO'}
+        </Text>
+      </Pressable>
     </BreathingContainer>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  circleContainer: {
-    width: 200,
-    height: 200,
+  circleWrapper: {
+    width: 220,
+    height: 220,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: 24,
   },
   circle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2,
     position: 'absolute',
-    backgroundColor: 'rgba(108, 92, 231, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
-  stateText: {
+  phaseLabel: {
     ...Fonts.subtitle,
-    fontSize: 24,
-    zIndex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 1,
+    zIndex: 2,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    maxWidth: 160,
   },
 });
-
-export default FourSevenEight;

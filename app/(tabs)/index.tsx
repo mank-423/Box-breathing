@@ -3,7 +3,9 @@ import { useRouter } from 'expo-router';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import Card from '@/components/Card';
 import useStore from '@/store/zustand-store';
-import { Colors, Fonts, Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BreathingImages } from '@/constants/images';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -16,33 +18,36 @@ export default function HomeScreen() {
     setFourSevenEightState,
   } = useStore();
 
-  const breathingTechniques = [
+  const techniques = [
     {
       id: 1,
       title: 'Box Breathing',
-      description: '4-4-4-4 • Calm & Focus',
+      description: '4-4-4-4 · Balance & Focus',
       count: boxBreathingState,
       setter: setBoxBreathingState,
       url: '/box',
-      colors: ['#667eea', '#764ba2'],
+      image: BreathingImages.box,
+      icon: '⊞',
     },
     {
       id: 2,
       title: 'Sigh Breathing',
-      description: '5-2-5 • Relax & Release',
+      description: '5-2-5 · Relax & Release',
       count: sighBreathingState,
       setter: setSighBreathingState,
       url: '/sigh',
-      colors: ['#f093fb', '#f5576c'],
+      image: BreathingImages.sigh,
+      icon: '◯',
     },
     {
       id: 3,
       title: '4-7-8 Breathing',
-      description: '4-7-8 • Sleep & Calm',
+      description: '4-7-8 · Sleep & Calm',
       count: fourSevenEightState,
       setter: setFourSevenEightState,
       url: '/four-seven-eight',
-      colors: ['#6C5CE7', '#A29BFE'],
+      image: BreathingImages.fourSevenEight,
+      icon: '◉',
     },
   ];
 
@@ -50,21 +55,28 @@ export default function HomeScreen() {
     <ParallaxScrollView
       headerBackgroundColor={{ light: 'transparent', dark: 'transparent' }}
     >
+      <LinearGradient
+        colors={['rgba(108,92,231,0.2)', 'transparent']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.5 }}
+        style={styles.headerGlow}
+      />
       <View style={styles.header}>
         <Text style={Fonts.title}>Breathe Easy</Text>
         <Text style={Fonts.body}>Find your calm, one breath at a time</Text>
       </View>
 
       <View style={styles.grid}>
-        {breathingTechniques.map((technique) => (
-          <View key={technique.id} style={styles.gridItem}>
+        {techniques.map((tech) => (
+          <View key={tech.id} style={styles.gridItem}>
             <Card
-              title={technique.title}
-              description={technique.description}
-              count={technique.count}
-              onChange={technique.setter}
-              url={technique.url}
-              colors={technique.colors}
+              title={tech.title}
+              description={tech.description}
+              count={tech.count}
+              onChange={tech.setter}
+              url={tech.url}
+              image={tech.image}
+              icon={tech.icon}
             />
           </View>
         ))}
@@ -79,9 +91,17 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.lg,
   },
+  headerGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+  },
   grid: {
     paddingHorizontal: Spacing.md,
     gap: Spacing.md,
+    paddingBottom: Spacing.xxl,
   },
   gridItem: {
     width: '100%',

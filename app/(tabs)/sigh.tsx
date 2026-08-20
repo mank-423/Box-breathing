@@ -1,55 +1,146 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import useStore from '@/store/zustand-store';
-import { Colors, Fonts, Spacing } from '@/constants/theme';
+import { Fonts } from '@/constants/theme';
+import BreathingContainer from '@/components/BreathingContainer';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withTiming,
+    withRepeat,
+    withSequence,
+    Easing,
+} from 'react-native-reanimated';
 
-const Sigh = () => {
-    const states = [
-        { title: 'Breathe', duration: 5 },
-        { title: '1 small breath in', duration: 2 },
-        { title: 'Breathe Out', duration: 5 }
-    ];
+const states = [
+    { title: 'Breathe', duration: 5, message: 'Inhale slowly', color: '#F093FB' },
+    { title: 'Small Sigh', duration: 2, message: 'Take one more breath', color: '#F5576C' },
+    { title: 'Breathe Out', duration: 5, message: 'Exhale with a sigh', color: '#4A90D9' },
+];
 
-    const [currentIndex, setCurrentIndex] = useState(0);
+// Floating particle dot moving vertically in parallel
+const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: number; delay: number; color: string }) => {
+    const translateY = useSharedValue(0);
+
+    useEffect(() => {
+        translateY.value = withRepeat(
+            withSequence(
+                withTiming(-8, { duration: 1500 + delay, easing: Easing.inOut(Easing.ease) }),
+                withTiming(8, { duration: 1500 + delay, easing: Easing.inOut(Easing.ease) })
+            ),
+            -1,
+            true
+        );
+    }, [delay]);
+
+    const animatedDotStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translateY.value }],
+    }));
+
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+
+    return (
+        <Animated.View
+            style={[
+                styles.dot,
+                {
+                    left: 110 + x - 2,
+                    top: 110 + y - 2,
+                    backgroundColor: color,
+                },
+                animatedDotStyle,
+            ]}
+        />
+    );
+};
+
+export default function Sigh() {
+    const { sighBreathingState } = useStore();
+
+    const [currentIndex, setCurrentIndex] = useState(-1);
     const [currentCycle, setCurrentCycle] = useState(1);
     const [currentStateCount, setCurrentStateCount] = useState(0);
     const [isRunning, setIsRunning] = useState(false);
-    const intervalRef = useRef<number | null>(null);
-    const timeoutRef = useRef<number | null>(null);
-    const countdownRef = useRef<number | null>(null);
-    const { sighBreathingState, setSighBreathingState } = useStore();
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // ✅ Clean up everything
-    const cleanup = () => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+    // Animation shared values
+    const circleScale = useSharedValue(1);
+    const particleScale = useSharedValue(1);
+
+    // Generate particle coordinates outside main circle
+    const particles = useMemo(() => {
+        const list = [];
+        const count = 36;
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * 2 * Math.PI;
+            const radius = 84 + (i % 3) * 8;
+            const delay = (i % 6) * 150;
+            list.push({ id: i, angle, radius, delay });
         }
+        return list;
+    }, []);
+
+    // Phase-based scaling logic for Sigh Breathing
+    useEffect(() => {
+        if (!isRunning || currentIndex === -1) {
+            circleScale.value = withTiming(1, { duration: 500 });
+            particleScale.value = withTiming(1, { duration: 500 });
+            return;
+        }
+
+        const durationMs = states[currentIndex].duration * 1000;
+
+        switch (currentIndex) {
+            case 0: // BREATHE (Main Inhale) -> Expand scale
+                circleScale.value = withTiming(1.2, { duration: durationMs, easing: Easing.out(Easing.ease) });
+                particleScale.value = withTiming(1.15, { duration: durationMs, easing: Easing.out(Easing.ease) });
+                break;
+
+            case 1: // SMALL SIGH (Extra Inhale) -> Expand further
+                circleScale.value = withTiming(1.35, { duration: durationMs, easing: Easing.out(Easing.ease) });
+                particleScale.value = withTiming(1.28, { duration: durationMs, easing: Easing.out(Easing.ease) });
+                break;
+
+            case 2: // BREATHE OUT (Long Exhale) -> Contract to base
+                circleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
+                particleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
+                break;
+        }
+    }, [currentIndex, isRunning]);
+
+    const animatedCircleStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: circleScale.value }],
+    }));
+
+    const animatedParticleContainerStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: particleScale.value }],
+    }));
+
+    const cleanup = useCallback(() => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
-        if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
         }
-    };
+    }, []);
 
-    // ✅ Reset everything
-    const resetAll = () => {
+    const resetAll = useCallback(() => {
         cleanup();
         setIsRunning(false);
-        setCurrentIndex(0);
+        setCurrentIndex(-1);
         setCurrentCycle(1);
         setCurrentStateCount(0);
-    };
+        circleScale.value = withTiming(1, { duration: 400 });
+        particleScale.value = withTiming(1, { duration: 400 });
+    }, [cleanup]);
 
-    const runStep = (index: number, cycle: number) => {
-        // Check if component is unmounted or should stop
-        if (!isRunning) {
-            resetAll();
-            return;
-        }
+    const runStep = useCallback((index: number, cycle: number) => {
+        cleanup();
 
         if (cycle > sighBreathingState) {
             resetAll();
@@ -57,123 +148,140 @@ const Sigh = () => {
         }
 
         if (index >= states.length) {
-            setCurrentCycle(cycle + 1);
-            cleanup();
-            timeoutRef.current = setTimeout(() => {
-                if (isRunning) {
-                    runStep(0, cycle + 1);
-                }
-            }, 1000) as any;
+            const nextCycle = cycle + 1;
+            setCurrentCycle(nextCycle);
+            if (nextCycle > sighBreathingState) {
+                resetAll();
+                return;
+            }
+            timeoutRef.current = setTimeout(() => runStep(0, nextCycle), 0);
             return;
         }
 
+        const state = states[index];
         setCurrentIndex(index);
-        const duration = states[index].duration;
-        setCurrentStateCount(duration);
+        setCurrentStateCount(state.duration);
 
-        let countdown = duration;
-        countdownRef.current = setInterval(() => {
+        let countdown = state.duration;
+        intervalRef.current = setInterval(() => {
             countdown--;
             setCurrentStateCount(countdown);
         }, 1000);
 
-        cleanup();
         timeoutRef.current = setTimeout(() => {
-            if (countdownRef.current) {
-                clearInterval(countdownRef.current);
-                countdownRef.current = null;
-            }
-            if (isRunning) {
-                runStep(index + 1, cycle);
-            }
-        }, duration * 1000) as any;
-    };
+            runStep(index + 1, cycle);
+        }, state.duration * 1000);
+    }, [sighBreathingState, cleanup, resetAll]);
 
-    const onClick = () => {
+    const onClick = useCallback(() => {
         if (isRunning) return;
         resetAll();
         setIsRunning(true);
         setCurrentCycle(1);
-        setCurrentIndex(0);
         runStep(0, 1);
-    };
+    }, [isRunning, resetAll, runStep]);
 
-    // ✅ Clean up on unmount
     useEffect(() => {
-        return () => {
-            resetAll();
-        };
-    }, []);
+        return () => cleanup();
+    }, [cleanup]);
 
-    const currentState = states[currentIndex] || states[0];
+    const current = currentIndex >= 0 ? states[currentIndex] : null;
+    const currentColor = current?.color || '#F093FB';
+    const statusText = isRunning ? (current?.message || '') : 'Tap GO to start';
+    const cycleText = isRunning ? `Cycle ${currentCycle}/${sighBreathingState}` : '';
 
     return (
-        <View style={styles.container}>
-            <Text style={Fonts.timer}>
-                {isRunning ? `${currentStateCount}s` : ' '}
-            </Text>
-
-            <View style={styles.centerContent}>
-                <Text style={styles.titleText}>
-                    {currentState.title}
-                </Text>
-
-                <Text style={styles.cycleText}>
-                    Cycle {currentCycle}/{sighBreathingState}
-                </Text>
-            </View>
-
+        <BreathingContainer
+            title="Sigh Breathing"
+            subtitle="5-2-5 · Relax & Release"
+            timer={currentStateCount}
+            isRunning={isRunning}
+            cycleText={cycleText}
+            statusText={statusText}
+            showButton={false}
+            phaseColors={['#f093fb', '#f5576c']}
+        >
             <Pressable
-                style={[styles.button, isRunning && styles.buttonDisabled]}
+                style={styles.circleWrapper}
                 onPress={onClick}
                 disabled={isRunning}
+                hitSlop={15}
             >
-                <Text style={styles.buttonText}>
-                    {isRunning ? 'Running...' : 'Start'}
+                {/* Parallel floating dots ring */}
+                <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
+                    {particles.map((p) => (
+                        <FloatingDot
+                            key={p.id}
+                            angle={p.angle}
+                            radius={p.radius}
+                            delay={p.delay}
+                            color={currentColor}
+                        />
+                    ))}
+                </Animated.View>
+
+                {/* Inner outlined circle */}
+                <Animated.View
+                    pointerEvents="none"
+                    style={[
+                        styles.animatedCircle,
+                        animatedCircleStyle,
+                        { borderColor: currentColor }
+                    ]}
+                />
+
+                <Text
+                    pointerEvents="none"
+                    style={styles.phaseLabel}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                >
+                    {current?.title || 'GO'}
                 </Text>
             </Pressable>
-        </View>
+        </BreathingContainer>
     );
-};
+}
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+    circleWrapper: {
+        width: 220,
+        height: 220,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'transparent',
-        padding: Spacing.lg,
+        marginBottom: 24,
     },
-    centerContent: {
+    particleField: {
+        width: 220,
+        height: 220,
+        position: 'absolute',
+    },
+    dot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        position: 'absolute',
+        opacity: 0.85,
+    },
+    animatedCircle: {
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        borderWidth: 2,
+        justifyContent: 'center',
         alignItems: 'center',
-        marginVertical: Spacing.xl,
+        position: 'absolute',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
     },
-    titleText: {
-        ...Fonts.title,
-        fontSize: 28,
-        marginBottom: Spacing.md,
-        textAlign: 'center',
-    },
-    cycleText: {
-        ...Fonts.cycle,
-        marginTop: Spacing.sm,
-    },
-    button: {
-        paddingHorizontal: Spacing.xl,
-        paddingVertical: Spacing.md,
-        backgroundColor: Colors.primary,
-        borderRadius: 12,
-        minWidth: 120,
-        alignItems: 'center',
-    },
-    buttonDisabled: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-    },
-    buttonText: {
-        color: Colors.white,
+    phaseLabel: {
+        ...Fonts.subtitle,
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
+        letterSpacing: 1,
+        zIndex: 2,
+        color: '#FFFFFF',
+        textAlign: 'center',
+        paddingHorizontal: 16,
+        maxWidth: 160,
     },
-});
-
-export default Sigh;
+}); 
