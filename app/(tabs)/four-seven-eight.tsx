@@ -1,5 +1,6 @@
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 import useStore from '@/store/zustand-store';
 import { Fonts } from '@/constants/theme';
 import BreathingContainer from '@/components/BreathingContainer';
@@ -10,17 +11,15 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
+  cancelAnimation,
 } from 'react-native-reanimated';
 
-// High-contrast neon colors to pop against deep indigo wave background:
-// Electric Cyan (Breathe In) -> Amber Gold (Hold) -> Neon Pink (Breathe Out)
 const states = [
   { title: 'Breathe In', duration: 4, message: 'Inhale slowly through your nose', color: '#00F2FE' },
   { title: 'Hold', duration: 7, message: 'Hold your breath gently', color: '#FFD700' },
   { title: 'Breathe Out', duration: 8, message: 'Exhale slowly through your mouth', color: '#FF007F' },
 ];
 
-// Floating particle dot moving vertically in parallel
 const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: number; delay: number; color: string }) => {
   const translateY = useSharedValue(0);
 
@@ -65,14 +64,14 @@ export default function FourSevenEight() {
   const [currentCycle, setCurrentCycle] = useState(1);
   const [currentStateCount, setCurrentStateCount] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isScreenFocusedRef = useRef(false);
 
-  // Shared animated values
   const circleScale = useSharedValue(1);
   const particleScale = useSharedValue(1);
 
-  // Generate particle coordinates outside main circle
   const particles = useMemo(() => {
     const list = [];
     const count = 36;
@@ -84,42 +83,6 @@ export default function FourSevenEight() {
     }
     return list;
   }, []);
-
-  // Animate size based on current 4-7-8 phase
-  useEffect(() => {
-    if (!isRunning || currentIndex === -1) {
-      circleScale.value = withTiming(1, { duration: 500 });
-      particleScale.value = withTiming(1, { duration: 500 });
-      return;
-    }
-
-    const durationMs = states[currentIndex].duration * 1000;
-
-    switch (currentIndex) {
-      case 0: // BREATHE IN (4s) -> Smooth expansion
-        circleScale.value = withTiming(1.35, { duration: durationMs, easing: Easing.out(Easing.ease) });
-        particleScale.value = withTiming(1.28, { duration: durationMs, easing: Easing.out(Easing.ease) });
-        break;
-
-      case 1: // HOLD (7s) -> Maintain size
-        circleScale.value = 1.35;
-        particleScale.value = 1.28;
-        break;
-
-      case 2: // BREATHE OUT (8s) -> Slow, complete contraction
-        circleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
-        particleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
-        break;
-    }
-  }, [currentIndex, isRunning]);
-
-  const animatedCircleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: circleScale.value }],
-  }));
-
-  const animatedParticleContainerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: particleScale.value }],
-  }));
 
   const cleanup = useCallback(() => {
     if (timeoutRef.current) {
@@ -138,12 +101,62 @@ export default function FourSevenEight() {
     setCurrentIndex(-1);
     setCurrentCycle(1);
     setCurrentStateCount(0);
-    circleScale.value = withTiming(1, { duration: 400 });
-    particleScale.value = withTiming(1, { duration: 400 });
-  }, [cleanup]);
+    cancelAnimation(circleScale);
+    cancelAnimation(particleScale);
+    circleScale.value = 1;
+    particleScale.value = 1;
+  }, [cleanup, circleScale, particleScale]);
+
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocusedRef.current = true;
+      resetAll();
+
+      return () => {
+        isScreenFocusedRef.current = false;
+        resetAll();
+      };
+    }, [resetAll])
+  );
+
+  useEffect(() => {
+    if (!isRunning || currentIndex === -1) {
+      circleScale.value = withTiming(1, { duration: 500 });
+      particleScale.value = withTiming(1, { duration: 500 });
+      return;
+    }
+
+    const durationMs = states[currentIndex].duration * 1000;
+
+    switch (currentIndex) {
+      case 0:
+        circleScale.value = withTiming(1.35, { duration: durationMs, easing: Easing.out(Easing.ease) });
+        particleScale.value = withTiming(1.28, { duration: durationMs, easing: Easing.out(Easing.ease) });
+        break;
+
+      case 1:
+        circleScale.value = 1.35;
+        particleScale.value = 1.28;
+        break;
+
+      case 2:
+        circleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
+        particleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
+        break;
+    }
+  }, [currentIndex, isRunning]);
+
+  const animatedCircleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: circleScale.value }],
+  }));
+
+  const animatedParticleContainerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: particleScale.value }],
+  }));
 
   const runStep = useCallback((index: number, cycle: number) => {
     cleanup();
+    if (!isScreenFocusedRef.current) return;
 
     if (cycle > fourSevenEightState) {
       resetAll();
@@ -167,6 +180,10 @@ export default function FourSevenEight() {
 
     let countdown = state.duration;
     intervalRef.current = setInterval(() => {
+      if (!isScreenFocusedRef.current) {
+        cleanup();
+        return;
+      }
       countdown--;
       setCurrentStateCount(countdown);
     }, 1000);
@@ -183,10 +200,6 @@ export default function FourSevenEight() {
     setCurrentCycle(1);
     runStep(0, 1);
   }, [isRunning, resetAll, runStep]);
-
-  useEffect(() => {
-    return () => cleanup();
-  }, [cleanup]);
 
   const current = currentIndex >= 0 ? states[currentIndex] : null;
   const currentColor = current?.color || '#00F2FE';
@@ -210,7 +223,6 @@ export default function FourSevenEight() {
         disabled={isRunning}
         hitSlop={15}
       >
-        {/* Parallel floating dots ring */}
         <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
           {particles.map((p) => (
             <FloatingDot
@@ -223,7 +235,6 @@ export default function FourSevenEight() {
           ))}
         </Animated.View>
 
-        {/* Thick bold animated circular border */}
         <Animated.View 
           pointerEvents="none" 
           style={[

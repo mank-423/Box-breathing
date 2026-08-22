@@ -1,6 +1,7 @@
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,13 +9,12 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { Fonts } from '@/constants/theme';
 import useStore from '@/store/zustand-store';
 import BreathingContainer from '@/components/BreathingContainer';
 
-// High-contrast vibrant colors that pop against deep indigo wave patterns:
-// Cyan (Inhale) -> Gold/Amber (Hold) -> Neon Pink (Exhale) -> Coral Gold (Hold)
 const PHASES = [
   { label: 'BREATHE IN', message: 'Inhale deeply', color: '#00F2FE', duration: 4 },
   { label: 'HOLD', message: 'Hold your breath', color: '#FFD700', duration: 4 },
@@ -60,15 +60,16 @@ const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: n
 };
 
 export default function Box() {
-  const { width } = useWindowDimensions();
   const { boxBreathingState } = useStore();
 
   const [phaseIndex, setPhaseIndex] = useState(-1);
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [cycleCount, setCycleCount] = useState(0);
+  
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isScreenFocusedRef = useRef(false);
 
   const circleScale = useSharedValue(1);
   const particleScale = useSharedValue(1);
@@ -84,6 +85,42 @@ export default function Box() {
     }
     return list;
   }, []);
+
+  const cleanup = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const resetAll = useCallback(() => {
+    cleanup();
+    setIsRunning(false);
+    setPhaseIndex(-1);
+    setTime(0);
+    setCycleCount(0);
+    cancelAnimation(circleScale);
+    cancelAnimation(particleScale);
+    circleScale.value = 1;
+    particleScale.value = 1;
+  }, [cleanup, circleScale, particleScale]);
+
+  // Reset screen completely on unmount or navigation blur
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocusedRef.current = true;
+      resetAll();
+
+      return () => {
+        isScreenFocusedRef.current = false;
+        resetAll();
+      };
+    }, [resetAll])
+  );
 
   useEffect(() => {
     if (!isRunning || phaseIndex === -1) {
@@ -122,29 +159,9 @@ export default function Box() {
     transform: [{ scale: particleScale.value }],
   }));
 
-  const cleanup = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  const resetAll = useCallback(() => {
-    cleanup();
-    setIsRunning(false);
-    setPhaseIndex(-1);
-    setTime(0);
-    setCycleCount(0);
-    circleScale.value = withTiming(1, { duration: 400 });
-    particleScale.value = withTiming(1, { duration: 400 });
-  }, [cleanup]);
-
   const runPhase = useCallback((index: number, cycle: number) => {
     cleanup();
+    if (!isScreenFocusedRef.current) return;
 
     if (cycle >= boxBreathingState) {
       resetAll();
@@ -168,6 +185,10 @@ export default function Box() {
 
     let countdown = phase.duration;
     intervalRef.current = setInterval(() => {
+      if (!isScreenFocusedRef.current) {
+        cleanup();
+        return;
+      }
       countdown--;
       setTime(countdown);
     }, 1000);
@@ -184,10 +205,6 @@ export default function Box() {
     setCycleCount(0);
     runPhase(0, 0);
   }, [isRunning, resetAll, runPhase]);
-
-  useEffect(() => {
-    return () => cleanup();
-  }, [cleanup]);
 
   const current = phaseIndex >= 0 ? PHASES[phaseIndex] : null;
   const currentColor = current?.color || '#00F2FE';
@@ -211,7 +228,6 @@ export default function Box() {
         disabled={isRunning}
         hitSlop={15}
       >
-        {/* Floating particles ring */}
         <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
           {particles.map((p) => (
             <FloatingDot 
@@ -224,7 +240,6 @@ export default function Box() {
           ))}
         </Animated.View>
 
-        {/* Thick Bold Animated Circle Ring */}
         <Animated.View 
           pointerEvents="none" 
           style={[
@@ -261,7 +276,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   dot: {
-    width: 6, // Slightly enlarged for clarity
+    width: 6,
     height: 6,
     borderRadius: 3,
     position: 'absolute',
@@ -274,11 +289,11 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    borderWidth: 5, // Increased from 2 to 5 for a bold pop
+    borderWidth: 5,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Dark backdrop filter so center text stays crisp
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 10,

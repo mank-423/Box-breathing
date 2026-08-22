@@ -1,5 +1,6 @@
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 import useStore from '@/store/zustand-store';
 import { Fonts } from '@/constants/theme';
 import BreathingContainer from '@/components/BreathingContainer';
@@ -10,6 +11,7 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
+  cancelAnimation,
 } from 'react-native-reanimated';
 
 // High-contrast neon colors that pop against blue/indigo wave patterns:
@@ -64,8 +66,10 @@ export default function Sigh() {
   const [currentCycle, setCurrentCycle] = useState(1);
   const [currentStateCount, setCurrentStateCount] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isScreenFocusedRef = useRef(false);
 
   const circleScale = useSharedValue(1);
   const particleScale = useSharedValue(1);
@@ -81,6 +85,41 @@ export default function Sigh() {
     }
     return list;
   }, []);
+
+  const cleanup = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const resetAll = useCallback(() => {
+    cleanup();
+    setIsRunning(false);
+    setCurrentIndex(-1);
+    setCurrentCycle(1);
+    setCurrentStateCount(0);
+    cancelAnimation(circleScale);
+    cancelAnimation(particleScale);
+    circleScale.value = 1;
+    particleScale.value = 1;
+  }, [cleanup, circleScale, particleScale]);
+
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocusedRef.current = true;
+      resetAll();
+
+      return () => {
+        isScreenFocusedRef.current = false;
+        resetAll();
+      };
+    }, [resetAll])
+  );
 
   useEffect(() => {
     if (!isRunning || currentIndex === -1) {
@@ -117,29 +156,9 @@ export default function Sigh() {
     transform: [{ scale: particleScale.value }],
   }));
 
-  const cleanup = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  const resetAll = useCallback(() => {
-    cleanup();
-    setIsRunning(false);
-    setCurrentIndex(-1);
-    setCurrentCycle(1);
-    setCurrentStateCount(0);
-    circleScale.value = withTiming(1, { duration: 400 });
-    particleScale.value = withTiming(1, { duration: 400 });
-  }, [cleanup]);
-
   const runStep = useCallback((index: number, cycle: number) => {
     cleanup();
+    if (!isScreenFocusedRef.current) return;
 
     if (cycle > sighBreathingState) {
       resetAll();
@@ -163,6 +182,10 @@ export default function Sigh() {
 
     let countdown = state.duration;
     intervalRef.current = setInterval(() => {
+      if (!isScreenFocusedRef.current) {
+        cleanup();
+        return;
+      }
       countdown--;
       setCurrentStateCount(countdown);
     }, 1000);
@@ -179,10 +202,6 @@ export default function Sigh() {
     setCurrentCycle(1);
     runStep(0, 1);
   }, [isRunning, resetAll, runStep]);
-
-  useEffect(() => {
-    return () => cleanup();
-  }, [cleanup]);
 
   const current = currentIndex >= 0 ? states[currentIndex] : null;
   const currentColor = current?.color || '#00F2FE';
@@ -206,7 +225,6 @@ export default function Sigh() {
         disabled={isRunning}
         hitSlop={15}
       >
-        {/* Floating particles ring */}
         <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
           {particles.map((p) => (
             <FloatingDot
@@ -219,7 +237,6 @@ export default function Sigh() {
           ))}
         </Animated.View>
 
-        {/* Thick Bold Animated Circle Ring */}
         <Animated.View
           pointerEvents="none"
           style={[
