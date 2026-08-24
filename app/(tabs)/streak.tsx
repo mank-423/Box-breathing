@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, Pressable, ScrollView, SafeAreaView } from 'react-native';
+import { StyleSheet, View, Text, Pressable, ScrollView } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
@@ -13,9 +13,11 @@ import Animated, {
   Easing
 } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const STREAK_KEY = '@breathing_streak_data';
 const PRIMARY_COLOR = '#015595';
+const ACCENT_COLOR = '#F97316'; // ✅ Orange for calendar
 
 interface StreakData {
   lastDate: string;
@@ -41,7 +43,6 @@ export default function StreakScreen() {
 
   useEffect(() => {
     if (streakData.streakCount > 0) {
-      // Fire animation when streak is active
       fireScale.value = withRepeat(
         withTiming(1.2, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
         -1,
@@ -106,23 +107,18 @@ export default function StreakScreen() {
     const today = getToday();
     
     if (todayCompleted) {
-      return; // Already completed today
+      return;
     }
 
     let newData = { ...streakData };
-    
-    // Add today to completed dates
     newData.completedDates.push(today);
     
-    // Check if yesterday was completed or if this is a new streak
     const yesterday = getYesterday();
     const completedYesterday = newData.completedDates.includes(yesterday);
     
     if (completedYesterday || newData.completedDates.length === 1) {
-      // Continue or start streak
       newData.streakCount += 1;
     } else {
-      // Streak broken, reset to 1
       newData.streakCount = 1;
     }
     
@@ -138,7 +134,7 @@ export default function StreakScreen() {
     streakData.completedDates.forEach(date => {
       marked[date] = { 
         selected: true, 
-        selectedColor: PRIMARY_COLOR,
+        selectedColor: ACCENT_COLOR, // ✅ Orange instead of blue
         selectedDotColor: '#fff',
       };
     });
@@ -147,9 +143,8 @@ export default function StreakScreen() {
     if (todayCompleted) {
       marked[today] = { 
         selected: true, 
-        selectedColor: PRIMARY_COLOR,
+        selectedColor: ACCENT_COLOR, // ✅ Orange
         selectedDotColor: '#fff',
-        startingDay: true,
       };
     }
     
@@ -157,7 +152,6 @@ export default function StreakScreen() {
   };
 
   const getWeekView = () => {
-    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const today = new Date();
     const dayOfWeek = today.getDay();
     const startOfWeek = new Date(today);
@@ -179,7 +173,7 @@ export default function StreakScreen() {
   const weekData = getWeekView();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
         <LinearGradient
           colors={['rgba(1,85,149,0.15)', 'transparent']}
@@ -198,7 +192,7 @@ export default function StreakScreen() {
             <Text style={Fonts.body}>Keep the momentum going!</Text>
           </View>
 
-          {/* Streak Counter */}
+          {/* Streak Counter - Smaller */}
           <View style={styles.streakCard}>
             <LinearGradient
               colors={['#015595', '#0284c7']}
@@ -244,7 +238,7 @@ export default function StreakScreen() {
             </View>
           </View>
 
-          {/* Calendar */}
+          {/* Calendar - Orange Highlights */}
           <View style={styles.calendarContainer}>
             <Text style={styles.calendarTitle}>Progress Calendar</Text>
             <Calendar
@@ -253,10 +247,12 @@ export default function StreakScreen() {
                 calendarBackground: 'rgba(255,255,255,0.05)',
                 textSectionTitleColor: Colors.gray,
                 dayTextColor: Colors.white,
-                todayTextColor: PRIMARY_COLOR,
-                selectedDayBackgroundColor: PRIMARY_COLOR,
+                todayTextColor: ACCENT_COLOR, 
+                selectedDayBackgroundColor: ACCENT_COLOR,
                 selectedDayTextColor: '#fff',
-                arrowColor: PRIMARY_COLOR,
+                arrowColor: ACCENT_COLOR,
+                arrowHeight: 20,
+                arrowWidth: 20,
                 monthTextColor: Colors.white,
                 textDisabledColor: 'rgba(255,255,255,0.2)',
               }}
@@ -276,7 +272,6 @@ export default function StreakScreen() {
             </Text>
           </Pressable>
           
-          {/* Extra bottom padding for tab bar */}
           <View style={styles.bottomPadding} />
         </ScrollView>
       </View>
@@ -287,6 +282,7 @@ export default function StreakScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingBottom: 8,
     backgroundColor: 'transparent',
   },
   container: {
@@ -323,19 +319,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fireContainer: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   fireEmoji: {
-    fontSize: 48,
+    fontSize: 30, // ✅ Smaller
   },
   streakNumber: {
-    fontSize: 56,
+    fontSize: 38, // ✅ Smaller
     fontWeight: '700',
     color: '#fff',
     fontVariant: ['tabular-nums'],
   },
   streakLabel: {
-    fontSize: 20,
+    fontSize: 18, // ✅ Smaller
     fontWeight: '600',
     color: 'rgba(255,255,255,0.9)',
     marginTop: Spacing.xs,
@@ -378,11 +374,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   weekDayCompleted: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
+    backgroundColor: ACCENT_COLOR, // ✅ Orange
+    borderColor: ACCENT_COLOR,
   },
   weekDayToday: {
-    borderColor: PRIMARY_COLOR,
+    borderColor: ACCENT_COLOR, // ✅ Orange
     borderWidth: 2,
   },
   weekDayNumber: {
