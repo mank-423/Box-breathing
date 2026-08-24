@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { Colors } from '@/constants/theme';
+
+const PRIMARY_COLOR = '#015595';
 
 export default function TabLayout() {
   return (
@@ -9,40 +10,56 @@ export default function TabLayout() {
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarStyle: {
-          display: 'none', // ✅ Completely hide the tab bar
+          backgroundColor: 'rgba(0,0,0,0.9)',
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 4,
         },
-        tabBarActiveTintColor: Colors.primary,
+        tabBarActiveTintColor: PRIMARY_COLOR,
         tabBarInactiveTintColor: 'rgba(255,255,255,0.3)',
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '500',
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          href: null, // Also hide from tab bar
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
+      
+      <Tabs.Screen
+        name="streak"
+        options={{
+          title: 'Streak',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flame" size={size} color={color} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="box"
         options={{
-          title: 'Box',
           href: null,
         }}
       />
       <Tabs.Screen
         name="sigh"
         options={{
-          title: 'Sigh',
           href: null,
         }}
       />
       <Tabs.Screen
         name="four-seven-eight"
         options={{
-          title: '4-7-8',
           href: null,
         }}
       />
