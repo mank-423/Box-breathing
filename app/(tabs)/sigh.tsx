@@ -4,6 +4,8 @@ import { useFocusEffect } from 'expo-router';
 import useStore from '@/store/zustand-store';
 import { Fonts } from '@/constants/theme';
 import BreathingContainer from '@/components/BreathingContainer';
+import { useCompleteSession } from '@/hooks/useCompleteSession';
+import StreakPopup from '@/components/StreakPopup';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -14,8 +16,6 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 
-// High-contrast neon colors that pop against blue/indigo wave patterns:
-// Electric Cyan (Breathe) -> Gold (Small Sigh) -> Neon Pink (Breathe Out)
 const states = [
   { title: 'Breathe', duration: 5, message: 'Inhale slowly', color: '#00F2FE' },
   { title: 'Small Sigh', duration: 2, message: 'Take one more breath', color: '#FFD700' },
@@ -62,6 +62,11 @@ const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: n
 export default function Sigh() {
   const { sighBreathingState } = useStore();
 
+  const { completeSession } = useCompleteSession();
+  const [showStreakPopup, setShowStreakPopup] = useState(false);
+  const [newStreakCount, setNewStreakCount] = useState(0);
+  const [newHighestStreak, setNewHighestStreak] = useState(0);
+
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [currentCycle, setCurrentCycle] = useState(1);
   const [currentStateCount, setCurrentStateCount] = useState(0);
@@ -70,6 +75,7 @@ export default function Sigh() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isScreenFocusedRef = useRef(false);
+  const isRunningRef = useRef(false);
 
   const circleScale = useSharedValue(1);
   const particleScale = useSharedValue(1);
@@ -97,9 +103,16 @@ export default function Sigh() {
     }
   }, []);
 
-  const resetAll = useCallback(() => {
+  const setIsRunningWithRef = useCallback((value: boolean) => {
+    setIsRunning(value);
+    isRunningRef.current = value;
+  }, []);
+
+  const resetAll = useCallback((shouldCompleteSession: boolean = false) => {
+    const wasRunning = isRunningRef.current;
+
     cleanup();
-    setIsRunning(false);
+    setIsRunningWithRef(false);
     setCurrentIndex(-1);
     setCurrentCycle(1);
     setCurrentStateCount(0);
@@ -107,18 +120,27 @@ export default function Sigh() {
     cancelAnimation(particleScale);
     circleScale.value = 1;
     particleScale.value = 1;
-  }, [cleanup, circleScale, particleScale]);
+
+    if (shouldCompleteSession && wasRunning) {
+      completeSession().then((result) => {
+        if (result && result.updated) {
+          setNewStreakCount(result.data.streakCount);
+          setNewHighestStreak(result.data.highestStreak);
+          setShowStreakPopup(true);
+        }
+      });
+    }
+  }, [cleanup, circleScale, particleScale, completeSession, setIsRunningWithRef]);
 
   useFocusEffect(
     useCallback(() => {
       isScreenFocusedRef.current = true;
-      resetAll();
 
       return () => {
         isScreenFocusedRef.current = false;
-        resetAll();
+        cleanup();
       };
-    }, [resetAll])
+    }, [cleanup])
   );
 
   useEffect(() => {
@@ -161,7 +183,7 @@ export default function Sigh() {
     if (!isScreenFocusedRef.current) return;
 
     if (cycle > sighBreathingState) {
-      resetAll();
+      resetAll(true);
       return;
     }
 
@@ -169,7 +191,7 @@ export default function Sigh() {
       const nextCycle = cycle + 1;
       setCurrentCycle(nextCycle);
       if (nextCycle > sighBreathingState) {
-        resetAll();
+        resetAll(true);
         return;
       }
       timeoutRef.current = setTimeout(() => runStep(0, nextCycle), 0);
@@ -197,11 +219,10 @@ export default function Sigh() {
 
   const onClick = useCallback(() => {
     if (isRunning) return;
-    resetAll();
-    setIsRunning(true);
+    setIsRunningWithRef(true);
     setCurrentCycle(1);
     runStep(0, 1);
-  }, [isRunning, resetAll, runStep]);
+  }, [isRunning, runStep, setIsRunningWithRef]);
 
   const current = currentIndex >= 0 ? states[currentIndex] : null;
   const currentColor = current?.color || '#00F2FE';
@@ -209,53 +230,62 @@ export default function Sigh() {
   const cycleText = isRunning ? `Cycle ${currentCycle}/${sighBreathingState}` : '';
 
   return (
-    <BreathingContainer
-      title="Sigh Breathing"
-      subtitle="5-2-5 · Relax & Release"
-      timer={currentStateCount}
-      isRunning={isRunning}
-      cycleText={cycleText}
-      statusText={statusText}
-      showButton={false}
-      phaseColors={['#00F2FE', '#FFD700', '#FF007F']}
-    >
-      <Pressable
-        style={styles.circleWrapper}
-        onPress={onClick}
-        disabled={isRunning}
-        hitSlop={15}
+    <>
+      <BreathingContainer
+        title="Sigh Breathing"
+        subtitle="5-2-5 · Relax & Release"
+        timer={currentStateCount}
+        isRunning={isRunning}
+        cycleText={cycleText}
+        statusText={statusText}
+        showButton={false}
+        phaseColors={['#00F2FE', '#FFD700', '#FF007F']}
       >
-        <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
-          {particles.map((p) => (
-            <FloatingDot
-              key={p.id}
-              angle={p.angle}
-              radius={p.radius}
-              delay={p.delay}
-              color={currentColor}
-            />
-          ))}
-        </Animated.View>
-
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.animatedCircle,
-            animatedCircleStyle,
-            { borderColor: currentColor, shadowColor: currentColor }
-          ]}
-        />
-
-        <Text
-          pointerEvents="none"
-          style={styles.phaseLabel}
-          numberOfLines={1}
-          adjustsFontSizeToFit
+        <Pressable
+          style={styles.circleWrapper}
+          onPress={onClick}
+          disabled={isRunning}
+          hitSlop={15}
         >
-          {current?.title || 'GO'}
-        </Text>
-      </Pressable>
-    </BreathingContainer>
+          <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
+            {particles.map((p) => (
+              <FloatingDot
+                key={p.id}
+                angle={p.angle}
+                radius={p.radius}
+                delay={p.delay}
+                color={currentColor}
+              />
+            ))}
+          </Animated.View>
+
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.animatedCircle,
+              animatedCircleStyle,
+              { borderColor: currentColor, shadowColor: currentColor }
+            ]}
+          />
+
+          <Text
+            pointerEvents="none"
+            style={styles.phaseLabel}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {current?.title || 'GO'}
+          </Text>
+        </Pressable>
+      </BreathingContainer>
+
+      <StreakPopup
+        visible={showStreakPopup}
+        streakCount={newStreakCount}
+        highestStreak={newHighestStreak}
+        onClose={() => setShowStreakPopup(false)}
+      />
+    </>
   );
 }
 

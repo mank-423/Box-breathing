@@ -14,6 +14,8 @@ import Animated, {
 import { Fonts } from '@/constants/theme';
 import useStore from '@/store/zustand-store';
 import BreathingContainer from '@/components/BreathingContainer';
+import { useCompleteSession } from '@/hooks/useCompleteSession';
+import StreakPopup from '@/components/StreakPopup';
 
 const PHASES = [
   { label: 'BREATHE IN', message: 'Inhale deeply', color: '#00F2FE', duration: 4 },
@@ -61,6 +63,11 @@ const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: n
 
 export default function Box() {
   const { boxBreathingState } = useStore();
+  
+  const { completeSession } = useCompleteSession();
+  const [showStreakPopup, setShowStreakPopup] = useState(false);
+  const [newStreakCount, setNewStreakCount] = useState(0);
+  const [newHighestStreak, setNewHighestStreak] = useState(0);
 
   const [phaseIndex, setPhaseIndex] = useState(-1);
   const [time, setTime] = useState(0);
@@ -70,6 +77,7 @@ export default function Box() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isScreenFocusedRef = useRef(false);
+  const isRunningRef = useRef(false); // ✅ Add ref
 
   const circleScale = useSharedValue(1);
   const particleScale = useSharedValue(1);
@@ -97,9 +105,18 @@ export default function Box() {
     }
   }, []);
 
-  const resetAll = useCallback(() => {
+  // ✅ Combined setter for isRunning
+  const setIsRunningWithRef = useCallback((value: boolean) => {
+    setIsRunning(value);
+    isRunningRef.current = value;
+  }, []);
+
+  // ✅ Modified resetAll - uses ref for reliable state
+  const resetAll = useCallback((shouldCompleteSession: boolean = false) => {
+    const wasRunning = isRunningRef.current;
+
     cleanup();
-    setIsRunning(false);
+    setIsRunningWithRef(false);
     setPhaseIndex(-1);
     setTime(0);
     setCycleCount(0);
@@ -107,19 +124,27 @@ export default function Box() {
     cancelAnimation(particleScale);
     circleScale.value = 1;
     particleScale.value = 1;
-  }, [cleanup, circleScale, particleScale]);
 
-  // Reset screen completely on unmount or navigation blur
+    if (shouldCompleteSession && wasRunning) {
+      completeSession().then((result) => {
+        if (result && result.updated) {
+          setNewStreakCount(result.data.streakCount);
+          setNewHighestStreak(result.data.highestStreak);
+          setShowStreakPopup(true);
+        }
+      });
+    }
+  }, [cleanup, circleScale, particleScale, completeSession, setIsRunningWithRef]);
+
   useFocusEffect(
     useCallback(() => {
       isScreenFocusedRef.current = true;
-      resetAll();
 
       return () => {
         isScreenFocusedRef.current = false;
-        resetAll();
+        cleanup();
       };
-    }, [resetAll])
+    }, [cleanup])
   );
 
   useEffect(() => {
@@ -164,7 +189,7 @@ export default function Box() {
     if (!isScreenFocusedRef.current) return;
 
     if (cycle >= boxBreathingState) {
-      resetAll();
+      resetAll(true);
       return;
     }
 
@@ -172,7 +197,7 @@ export default function Box() {
       const newCycle = cycle + 1;
       setCycleCount(newCycle);
       if (newCycle >= boxBreathingState) {
-        resetAll();
+        resetAll(true);
         return;
       }
       timeoutRef.current = setTimeout(() => runPhase(0, newCycle), 0);
@@ -198,13 +223,13 @@ export default function Box() {
     }, phase.duration * 1000);
   }, [boxBreathingState, cleanup, resetAll]);
 
+  // ✅ Fixed onClick - no resetAll(false) before starting
   const onClick = useCallback(() => {
     if (isRunning) return;
-    resetAll();
-    setIsRunning(true);
+    setIsRunningWithRef(true);
     setCycleCount(0);
     runPhase(0, 0);
-  }, [isRunning, resetAll, runPhase]);
+  }, [isRunning, runPhase, setIsRunningWithRef]);
 
   const current = phaseIndex >= 0 ? PHASES[phaseIndex] : null;
   const currentColor = current?.color || '#00F2FE';
@@ -212,53 +237,62 @@ export default function Box() {
   const cycleText = isRunning ? `Cycle ${cycleCount + 1}/${boxBreathingState}` : '';
 
   return (
-    <BreathingContainer
-      title="Box Breathing"
-      subtitle="4-4-4-4 · Balance & Focus"
-      timer={time}
-      isRunning={isRunning}
-      cycleText={cycleText}
-      statusText={statusText}
-      showButton={false}
-      phaseColors={['#00F2FE', '#FFD700', '#FF007F', '#FF8C00']}
-    >
-      <Pressable 
-        style={styles.circleWrapper} 
-        onPress={onClick}
-        disabled={isRunning}
-        hitSlop={15}
+    <>
+      <BreathingContainer
+        title="Box Breathing"
+        subtitle="4-4-4-4 · Balance & Focus"
+        timer={time}
+        isRunning={isRunning}
+        cycleText={cycleText}
+        statusText={statusText}
+        showButton={false}
+        phaseColors={['#00F2FE', '#FFD700', '#FF007F', '#FF8C00']}
       >
-        <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
-          {particles.map((p) => (
-            <FloatingDot 
-              key={p.id} 
-              angle={p.angle} 
-              radius={p.radius} 
-              delay={p.delay} 
-              color={currentColor} 
-            />
-          ))}
-        </Animated.View>
-
-        <Animated.View 
-          pointerEvents="none" 
-          style={[
-            styles.animatedCircle, 
-            animatedCircleStyle,
-            { borderColor: currentColor, shadowColor: currentColor }
-          ]}
-        />
-
-        <Text 
-          pointerEvents="none" 
-          style={styles.phaseLabel}
-          numberOfLines={1}
-          adjustsFontSizeToFit
+        <Pressable 
+          style={styles.circleWrapper} 
+          onPress={onClick}
+          disabled={isRunning}
+          hitSlop={15}
         >
-          {current?.label || 'GO'}
-        </Text>
-      </Pressable>
-    </BreathingContainer>
+          <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
+            {particles.map((p) => (
+              <FloatingDot 
+                key={p.id} 
+                angle={p.angle} 
+                radius={p.radius} 
+                delay={p.delay} 
+                color={currentColor} 
+              />
+            ))}
+          </Animated.View>
+
+          <Animated.View 
+            pointerEvents="none" 
+            style={[
+              styles.animatedCircle, 
+              animatedCircleStyle,
+              { borderColor: currentColor, shadowColor: currentColor }
+            ]}
+          />
+
+          <Text 
+            pointerEvents="none" 
+            style={styles.phaseLabel}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {current?.label || 'GO'}
+          </Text>
+        </Pressable>
+      </BreathingContainer>
+
+      <StreakPopup
+        visible={showStreakPopup}
+        streakCount={newStreakCount}
+        highestStreak={newHighestStreak}
+        onClose={() => setShowStreakPopup(false)}
+      />
+    </>
   );
 }
 
