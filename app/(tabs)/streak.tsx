@@ -10,11 +10,21 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStreak } from '@/hooks/useStreak';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { streakService } from '@/services/streakService';
+
+const STREAK_KEY = '@breathing_streak_data';
 
 export default function StreakScreen() {
-  const { streak, loading } = useStreak();
+  const { streak, loading, refresh, resetStreak } = useStreak();
+
+  // Refresh data every time the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const fireScale = useSharedValue(1);
   const fireRotate = useSharedValue(0);
@@ -41,6 +51,19 @@ export default function StreakScreen() {
       { rotate: `${fireRotate.value * 8}deg` }
     ]
   }));
+
+  // ✅ Log button handler
+  const logStreakData = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(STREAK_KEY);
+      const data = saved ? JSON.parse(saved) : 'No data found';
+      console.log('📦 Current streak data:', data);
+      alert(`Data logged to console!\n\n${JSON.stringify(data, null, 2)}`);
+    } catch (error) {
+      console.error('Error reading streak data:', error);
+      alert('Error reading data. Check console for details.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -75,48 +98,6 @@ export default function StreakScreen() {
               {streak.highestStreak > 0 ? 'days' : 'Complete a session to start!'}
             </Text>
           </View>
-
-          {/* ✅ Test Button - Remove after confirming */}
-          <Pressable
-            style={{
-              padding: 12,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-              borderRadius: 8,
-              alignItems: 'center',
-              marginTop: 8,
-              marginBottom: 8,
-            }}
-            onPress={async () => {
-              const data = await AsyncStorage.getItem('@breathing_streak_data');
-              console.log('📦 Stored streak data:', data ? JSON.parse(data) : 'No data');
-            }}
-          >
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-              Check Storage (Logs to console)
-            </Text>
-          </Pressable>
-
-
-          <Pressable
-            style={{
-              padding: 12,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-              borderRadius: 8,
-              alignItems: 'center',
-              marginTop: 8,
-              marginBottom: 8,
-            }}
-            onPress={async () => {
-              await streakService.resetStreak();
-              console.log('🗑️ Streak data reset!');
-              // Refresh the page to show updated data
-              // You can use the refresh function from useStreak
-            }}
-          >
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-              Reset
-            </Text>
-          </Pressable>
 
           <View style={styles.motivationContainer}>
             <Text style={styles.motivationEmoji}>✨</Text>
