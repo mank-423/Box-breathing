@@ -1,6 +1,6 @@
 {
-  "name": "index.ts",
-  "main": "expo-router/entry",
+  "name": "anx-app",
+  "main": "index.ts",
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
