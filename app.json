@@ -4,20 +4,20 @@
     "slug": "anx-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/pea.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "anxapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/images/pea.png"
+      "icon": "./assets/images/logo.png"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/pea.png",
-        "backgroundImage": "./assets/images/pea.png",
-        "monochromeImage": "./assets/images/pea.png"
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundImage": "./assets/images/logo.png",
+        "monochromeImage": "./assets/images/logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -32,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/pea.png",
+          "image": "./assets/images/splash.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
