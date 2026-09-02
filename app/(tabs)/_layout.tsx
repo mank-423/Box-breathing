@@ -86,7 +86,6 @@ export default function TabLayout() {
         <Tabs.Screen name="box" options={{ href: null }} />
         <Tabs.Screen name="sigh" options={{ href: null }} />
         <Tabs.Screen name="four-seven-eight" options={{ href: null }} />
-        <Tabs.Screen name="sos" options={{ href: null }} />
       </Tabs>
 
       {/* SOS Center Button */}
