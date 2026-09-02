@@ -1,69 +1,48 @@
-import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { useState, useRef, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
-  cancelAnimation,
-} from 'react-native-reanimated';
-import { Fonts } from '@/constants/theme';
 import useStore from '@/store/zustand-store';
 import BreathingContainer from '@/components/BreathingContainer';
+import AuraBreathingCircle from '@/components/AuraBreathingCircle';
 import { useCompleteSession } from '@/hooks/useCompleteSession';
 import StreakPopup from '@/components/StreakPopup';
 
 const PHASES = [
-  { label: 'BREATHE IN', message: 'Inhale deeply', color: '#00F2FE', duration: 4 },
-  { label: 'HOLD', message: 'Hold your breath', color: '#FFD700', duration: 4 },
-  { label: 'BREATHE OUT', message: 'Exhale slowly', color: '#FF007F', duration: 4 },
-  { label: 'HOLD', message: 'Hold your breath', color: '#FF8C00', duration: 4 },
+  {
+    label: 'BREATHE IN',
+    message: 'Inhale deeply',
+    color: '#81B69D',      // Muted Sage
+    altColor: '#A3D9C9',   // Soft Seafoam
+    duration: 4,
+    type: 'in' as const
+  },
+  {
+    label: 'HOLD',
+    message: 'Hold your breath',
+    color: '#E0C097',      // Warm Sand
+    altColor: '#E2D4B7',   // Muted Amber
+    duration: 4,
+    type: 'hold' as const
+  },
+  {
+    label: 'BREATHE OUT',
+    message: 'Exhale slowly',
+    color: '#C38D9E',      // Dusty Rose
+    altColor: '#E2A9B8',   // Soft Clay
+    duration: 4,
+    type: 'out' as const
+  },
+  {
+    label: 'HOLD',
+    message: 'Hold your breath',
+    color: '#708090',      // Slate Blue
+    altColor: '#8C9DAE',   // Muted Lavender Blue
+    duration: 4,
+    type: 'hold-out' as const
+  },
 ];
-
-const FloatingDot = ({ angle, radius, delay, color }: { angle: number; radius: number; delay: number; color: string }) => {
-  const translateY = useSharedValue(0);
-
-  useEffect(() => {
-    translateY.value = withRepeat(
-      withSequence(
-        withTiming(-8, { duration: 1500 + delay, easing: Easing.inOut(Easing.ease) }),
-        withTiming(8, { duration: 1500 + delay, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
-    );
-  }, [delay]);
-
-  const animatedDotStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  const x = Math.cos(angle) * radius;
-  const y = Math.sin(angle) * radius;
-
-  return (
-    <Animated.View
-      style={[
-        styles.dot,
-        {
-          left: 110 + x - 3,
-          top: 110 + y - 3,
-          backgroundColor: color,
-          shadowColor: color,
-        },
-        animatedDotStyle,
-      ]}
-    />
-  );
-};
 
 export default function Box() {
   const { boxBreathingState } = useStore();
-  
   const { completeSession } = useCompleteSession();
   const [showStreakPopup, setShowStreakPopup] = useState(false);
   const [newStreakCount, setNewStreakCount] = useState(0);
@@ -73,116 +52,53 @@ export default function Box() {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [cycleCount, setCycleCount] = useState(0);
-  
+
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isScreenFocusedRef = useRef(false);
-  const isRunningRef = useRef(false); // ✅ Add ref
-
-  const circleScale = useSharedValue(1);
-  const particleScale = useSharedValue(1);
-
-  const particles = useMemo(() => {
-    const list = [];
-    const count = 36;
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * 2 * Math.PI;
-      const radius = 86 + (i % 3) * 8; 
-      const delay = (i % 6) * 150;
-      list.push({ id: i, angle, radius, delay });
-    }
-    return list;
-  }, []);
+  const isRunningRef = useRef(false);
 
   const cleanup = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    timeoutRef.current = null;
+    intervalRef.current = null;
   }, []);
 
-  // ✅ Combined setter for isRunning
   const setIsRunningWithRef = useCallback((value: boolean) => {
     setIsRunning(value);
     isRunningRef.current = value;
   }, []);
 
-  // ✅ Modified resetAll - uses ref for reliable state
   const resetAll = useCallback((shouldCompleteSession: boolean = false) => {
     const wasRunning = isRunningRef.current;
-
     cleanup();
     setIsRunningWithRef(false);
     setPhaseIndex(-1);
     setTime(0);
     setCycleCount(0);
-    cancelAnimation(circleScale);
-    cancelAnimation(particleScale);
-    circleScale.value = 1;
-    particleScale.value = 1;
 
     if (shouldCompleteSession && wasRunning) {
       completeSession().then((result) => {
-        if (result && result.updated) {
+        if (result?.updated) {
           setNewStreakCount(result.data.streakCount);
           setNewHighestStreak(result.data.highestStreak);
           setShowStreakPopup(true);
         }
       });
     }
-  }, [cleanup, circleScale, particleScale, completeSession, setIsRunningWithRef]);
+  }, [cleanup, completeSession, setIsRunningWithRef]);
 
+  // Guaranteed unmount & focus transition cleanup
   useFocusEffect(
     useCallback(() => {
       isScreenFocusedRef.current = true;
-
       return () => {
         isScreenFocusedRef.current = false;
-        cleanup();
+        resetAll(false);
       };
-    }, [cleanup])
+    }, [resetAll])
   );
-
-  useEffect(() => {
-    if (!isRunning || phaseIndex === -1) {
-      circleScale.value = withTiming(1, { duration: 500 });
-      particleScale.value = withTiming(1, { duration: 500 });
-      return;
-    }
-
-    const durationMs = PHASES[phaseIndex].duration * 1000;
-
-    switch (phaseIndex) {
-      case 0:
-        circleScale.value = withTiming(1.3, { duration: durationMs, easing: Easing.out(Easing.ease) });
-        particleScale.value = withTiming(1.25, { duration: durationMs, easing: Easing.out(Easing.ease) });
-        break;
-      case 1:
-        circleScale.value = 1.3;
-        particleScale.value = 1.25;
-        break;
-      case 2:
-        circleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
-        particleScale.value = withTiming(1, { duration: durationMs, easing: Easing.inOut(Easing.ease) });
-        break;
-      case 3:
-        circleScale.value = 1;
-        particleScale.value = 1;
-        break;
-    }
-  }, [phaseIndex, isRunning]);
-
-  const animatedCircleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: circleScale.value }],
-  }));
-
-  const animatedParticleContainerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: particleScale.value }],
-  }));
 
   const runPhase = useCallback((index: number, cycle: number) => {
     cleanup();
@@ -218,12 +134,9 @@ export default function Box() {
       setTime(countdown);
     }, 1000);
 
-    timeoutRef.current = setTimeout(() => {
-      runPhase(index + 1, cycle);
-    }, phase.duration * 1000);
+    timeoutRef.current = setTimeout(() => runPhase(index + 1, cycle), phase.duration * 1000);
   }, [boxBreathingState, cleanup, resetAll]);
 
-  // ✅ Fixed onClick - no resetAll(false) before starting
   const onClick = useCallback(() => {
     if (isRunning) return;
     setIsRunningWithRef(true);
@@ -232,9 +145,6 @@ export default function Box() {
   }, [isRunning, runPhase, setIsRunningWithRef]);
 
   const current = phaseIndex >= 0 ? PHASES[phaseIndex] : null;
-  const currentColor = current?.color || '#00F2FE';
-  const statusText = isRunning ? (current?.message || '') : 'Tap GO to start';
-  const cycleText = isRunning ? `Cycle ${cycleCount + 1}/${boxBreathingState}` : '';
 
   return (
     <>
@@ -243,47 +153,22 @@ export default function Box() {
         subtitle="4-4-4-4 · Balance & Focus"
         timer={time}
         isRunning={isRunning}
-        cycleText={cycleText}
-        statusText={statusText}
+        cycleText={isRunning ? `Cycle ${cycleCount + 1}/${boxBreathingState}` : ''}
+        statusText={isRunning ? (current?.message || '') : 'Tap to start'}
         showButton={false}
         phaseColors={['#00F2FE', '#FFD700', '#FF007F', '#FF8C00']}
       >
-        <Pressable 
-          style={styles.circleWrapper} 
+        <AuraBreathingCircle
+          isRunning={isRunning}
+          phaseIndex={phaseIndex}
+          durationSeconds={current?.duration || 4}
+          phaseType={current?.type || 'in'}
+          currentColor={current?.color || '#00F2FE'}
+          secondaryColor={current?.altColor || '#4FACFE'}
+          label={current?.label || 'GO'}
+          timer={time}
           onPress={onClick}
-          disabled={isRunning}
-          hitSlop={15}
-        >
-          <Animated.View pointerEvents="none" style={[styles.particleField, animatedParticleContainerStyle]}>
-            {particles.map((p) => (
-              <FloatingDot 
-                key={p.id} 
-                angle={p.angle} 
-                radius={p.radius} 
-                delay={p.delay} 
-                color={currentColor} 
-              />
-            ))}
-          </Animated.View>
-
-          <Animated.View 
-            pointerEvents="none" 
-            style={[
-              styles.animatedCircle, 
-              animatedCircleStyle,
-              { borderColor: currentColor, shadowColor: currentColor }
-            ]}
-          />
-
-          <Text 
-            pointerEvents="none" 
-            style={styles.phaseLabel}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            {current?.label || 'GO'}
-          </Text>
-        </Pressable>
+        />
       </BreathingContainer>
 
       <StreakPopup
@@ -295,56 +180,3 @@ export default function Box() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  circleWrapper: {
-    width: 220,
-    height: 220,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  particleField: {
-    width: 220,
-    height: 220,
-    position: 'absolute',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    position: 'absolute',
-    opacity: 0.95,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  animatedCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  phaseLabel: {
-    ...Fonts.subtitle,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    zIndex: 2,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    paddingHorizontal: 16,
-    maxWidth: 160,
-    textShadowColor: 'rgba(0, 0, 0, 0.9)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-});
