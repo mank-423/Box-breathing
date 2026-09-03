@@ -10,16 +10,16 @@ export default function GridBackground() {
   const rows = Math.ceil(height / CELL_SIZE) + 1;
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {/* 1. Base Background Image */}
       <Image
         source={BreathingImages.phoneBg}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         resizeMode="contain"
       />
 
       {/* 2. Soft dark overlay to ensure readability */}
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
 
       {/* 3. Grid Lines rendered ON TOP of the image */}
       {Array.from({ length: cols }).map((_, i) => (
@@ -54,7 +54,7 @@ export default function GridBackground() {
         colors={['transparent', 'rgba(0,0,0,0.6)']}
         start={{ x: 0.5, y: 0.4 }}
         end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
     </View>
   );

@@ -1,42 +1,29 @@
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { Colors, Fonts, Spacing, BorderRadius } from '@/constants/theme';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated from 'react-native-reanimated';
 
 interface BreathingContainerProps {
   title: string;
   subtitle: string;
-  timer: number;
   isRunning: boolean;
   cycleText: string;
   statusText: string;
-  onPress?: () => void; // Made optional
+  onPress?: () => void;
   children: React.ReactNode;
-  phaseColors?: string[];
-  showButton?: boolean; // Added flag to hide/show bottom button
+  showButton?: boolean;
 }
 
 export default function BreathingContainer({
   title,
   subtitle,
-  timer,
   isRunning,
   cycleText,
   statusText,
   onPress,
   children,
-  phaseColors = ['#6C5CE7', '#A29BFE'],
-  showButton = false, // Defaults to false
+  showButton = false,
 }: BreathingContainerProps) {
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(108,92,231,0.15)', 'transparent']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.6 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-
       <View style={styles.header}>
         <Text style={Fonts.title}>{title}</Text>
         <Text style={Fonts.body}>{subtitle}</Text>
@@ -44,12 +31,6 @@ export default function BreathingContainer({
 
       <View style={styles.content}>
         {children}
-
-        <View style={styles.timerSection}>
-          <Animated.Text style={Fonts.timer}>
-            {isRunning ? `${timer}s` : ' '}
-          </Animated.Text>
-        </View>
 
         <View style={styles.statusSection}>
           <Text style={Fonts.message}>{statusText}</Text>
@@ -84,7 +65,7 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: Spacing.xl,
-    marginBottom: Spacing.xxxl,
+    marginBottom: Spacing.xl,
     alignItems: 'center',
   },
   content: {
@@ -92,11 +73,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  timerSection: {
-    marginVertical: Spacing.xl,
-  },
   statusSection: {
     alignItems: 'center',
+    marginTop: Spacing.md,
     marginBottom: Spacing.xl,
   },
   button: {

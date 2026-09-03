@@ -5,6 +5,7 @@ import BreathingContainer from '@/components/BreathingContainer';
 import AuraBreathingCircle from '@/components/AuraBreathingCircle';
 import { useCompleteSession } from '@/hooks/useCompleteSession';
 import StreakPopup from '@/components/StreakPopup';
+import { TechniqueColors } from '@/constants/theme';
 
 const STATES = [
   {
@@ -143,20 +144,19 @@ export default function FourSevenEight() {
       <BreathingContainer
         title="4-7-8 Breathing"
         subtitle="Calm your nervous system"
-        timer={currentStateCount}
         isRunning={isRunning}
         cycleText={isRunning ? `Cycle ${currentCycle}/${fourSevenEightState}` : ''}
         statusText={isRunning ? (current?.message || '') : 'Tap to start'}
         showButton={false}
-        phaseColors={['#00F2FE', '#FFD700', '#FF007F']}
       >
         <AuraBreathingCircle
           isRunning={isRunning}
           phaseIndex={currentIndex}
           durationSeconds={current?.duration || 4}
           phaseType={current?.type || 'in'}
-          currentColor={current?.color || '#00F2FE'}
-          secondaryColor={current?.altColor || '#4FACFE'}
+          currentColor={current?.color || TechniqueColors.fourSevenEight}
+          secondaryColor={current?.altColor || TechniqueColors.fourSevenEight}
+          idleColor={TechniqueColors.fourSevenEight}
           label={current?.title || 'GO'}
           timer={currentStateCount}
           onPress={onClick}

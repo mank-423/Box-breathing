@@ -1,14 +1,10 @@
 import { StyleSheet, View, Text } from 'react-native';
-import { useRouter } from 'expo-router';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import Card from '@/components/Card';
 import useStore from '@/store/zustand-store';
-import { Fonts, Spacing } from '@/constants/theme';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BreathingImages } from '@/constants/images';
+import { Fonts, Spacing, TechniqueColors } from '@/constants/theme';
 
 export default function HomeScreen() {
-  const router = useRouter();
   const {
     boxBreathingState,
     setBoxBreathingState,
@@ -26,7 +22,7 @@ export default function HomeScreen() {
       count: boxBreathingState,
       setter: setBoxBreathingState,
       url: '/box',
-      image: BreathingImages.box,
+      color: TechniqueColors.box,
       icon: '⊞',
     },
     {
@@ -36,7 +32,7 @@ export default function HomeScreen() {
       count: sighBreathingState,
       setter: setSighBreathingState,
       url: '/sigh',
-      image: BreathingImages.sigh,
+      color: TechniqueColors.sigh,
       icon: '◯',
     },
     {
@@ -46,7 +42,7 @@ export default function HomeScreen() {
       count: fourSevenEightState,
       setter: setFourSevenEightState,
       url: '/four-seven-eight',
-      image: BreathingImages.fourSevenEight,
+      color: TechniqueColors.fourSevenEight,
       icon: '◉',
     },
   ];
@@ -55,12 +51,6 @@ export default function HomeScreen() {
     <ParallaxScrollView
       headerBackgroundColor={{ light: 'transparent', dark: 'transparent' }}
     >
-      <LinearGradient
-        colors={['rgba(108,92,231,0.2)', 'transparent']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.5 }}
-        style={styles.headerGlow}
-      />
       <View style={styles.header}>
         <Text style={Fonts.title}>Breathe Easy</Text>
         <Text style={Fonts.body}>Find your calm, one breath at a time</Text>
@@ -75,7 +65,7 @@ export default function HomeScreen() {
               count={tech.count}
               onChange={tech.setter}
               url={tech.url}
-              image={tech.image}
+              color={tech.color}
               icon={tech.icon}
             />
           </View>
@@ -90,13 +80,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.lg,
-  },
-  headerGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
   },
   grid: {
     paddingHorizontal: Spacing.md,

@@ -5,6 +5,7 @@ import BreathingContainer from '@/components/BreathingContainer';
 import AuraBreathingCircle from '@/components/AuraBreathingCircle';
 import { useCompleteSession } from '@/hooks/useCompleteSession';
 import StreakPopup from '@/components/StreakPopup';
+import { TechniqueColors } from '@/constants/theme';
 
 const PHASES = [
   {
@@ -151,20 +152,19 @@ export default function Box() {
       <BreathingContainer
         title="Box Breathing"
         subtitle="4-4-4-4 · Balance & Focus"
-        timer={time}
         isRunning={isRunning}
         cycleText={isRunning ? `Cycle ${cycleCount + 1}/${boxBreathingState}` : ''}
         statusText={isRunning ? (current?.message || '') : 'Tap to start'}
         showButton={false}
-        phaseColors={['#00F2FE', '#FFD700', '#FF007F', '#FF8C00']}
       >
         <AuraBreathingCircle
           isRunning={isRunning}
           phaseIndex={phaseIndex}
           durationSeconds={current?.duration || 4}
           phaseType={current?.type || 'in'}
-          currentColor={current?.color || '#00F2FE'}
-          secondaryColor={current?.altColor || '#4FACFE'}
+          currentColor={current?.color || TechniqueColors.box}
+          secondaryColor={current?.altColor || TechniqueColors.box}
+          idleColor={TechniqueColors.box}
           label={current?.label || 'GO'}
           timer={time}
           onPress={onClick}

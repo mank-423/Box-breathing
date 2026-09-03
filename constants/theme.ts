@@ -14,6 +14,17 @@ export const Colors = {
   grayDark: 'rgba(0,0,0,0.8)',
   background: '#0A0A0A',
   cardBg: 'rgba(255,255,255,0.05)',
+  accentWarm: '#D98F76',        // soft clay — future home for SOS/streak/tab/CTA
+  textPrimary: '#F5F1E8',       // warm cream, doubles as "foam" tone
+  textSecondary: 'rgba(245,241,232,0.65)',
+  glassSurface: 'rgba(10,14,28,0.62)',   
+glassBorder: 'rgba(255,255,255,0.10)',
+};
+
+export const TechniqueColors = {
+  box: '#C38D9E',            // dusty rose — matches box.tsx's breathe-out phase
+  sigh: '#8A9EA7',            // muted mist blue — matches sigh.tsx's breathe-out phase
+  fourSevenEight: '#8082A6',  // muted violet — matches 4-7-8.tsx's breathe-out phase
 };
 
 export const Fonts: Record<string, TextStyle> = {

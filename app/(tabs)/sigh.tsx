@@ -5,6 +5,7 @@ import BreathingContainer from '@/components/BreathingContainer';
 import AuraBreathingCircle from '@/components/AuraBreathingCircle';
 import { useCompleteSession } from '@/hooks/useCompleteSession';
 import StreakPopup from '@/components/StreakPopup';
+import { TechniqueColors } from '@/constants/theme';
 
 const STATES = [
   {
@@ -143,20 +144,19 @@ export default function Sigh() {
       <BreathingContainer
         title="Sigh Breathing"
         subtitle="5-2-5 · Relax & Release"
-        timer={currentStateCount}
         isRunning={isRunning}
         cycleText={isRunning ? `Cycle ${currentCycle}/${sighBreathingState}` : ''}
         statusText={isRunning ? (current?.message || '') : 'Tap to start'}
         showButton={false}
-        phaseColors={['#00F2FE', '#FFD700', '#FF007F']}
       >
         <AuraBreathingCircle
           isRunning={isRunning}
           phaseIndex={currentIndex}
           durationSeconds={current?.duration || 5}
           phaseType={current?.type || 'in'}
-          currentColor={current?.color || '#00F2FE'}
-          secondaryColor={current?.altColor || '#4FACFE'}
+          currentColor={current?.color || TechniqueColors.sigh}
+          secondaryColor={current?.altColor || TechniqueColors.sigh}
+          idleColor={TechniqueColors.sigh}
           label={current?.title || 'GO'}
           timer={currentStateCount}
           onPress={onClick}

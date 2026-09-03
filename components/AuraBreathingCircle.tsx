@@ -4,8 +4,9 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
+  withRepeat,
   cancelAnimation,
+  Easing,
   interpolate,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,8 @@ interface AuraBreathingCircleProps {
   phaseType: 'in' | 'hold' | 'out' | 'hold-out';
   currentColor: string;
   secondaryColor?: string;
+  idleColor: string;
+  idleSecondaryColor?: string;
   label: string;
   timer: number;
   onPress: () => void;
@@ -33,17 +36,23 @@ export default function AuraBreathingCircle({
   phaseType,
   currentColor,
   secondaryColor,
+  idleColor,
+  idleSecondaryColor,
   label,
   timer,
   onPress,
 }: AuraBreathingCircleProps) {
   const breathExpansion = useSharedValue(0);
+  const holdPulse = useSharedValue(0);
+
+  const isHold = phaseType === 'hold' || phaseType === 'hold-out';
 
   useEffect(() => {
-    // Stop and reset immediately when session ends or component unmounts
     if (!isRunning || phaseIndex === -1) {
       cancelAnimation(breathExpansion);
+      cancelAnimation(holdPulse);
       breathExpansion.value = withTiming(0, { duration: 400 });
+      holdPulse.value = withTiming(0, { duration: 400 });
       return;
     }
 
@@ -51,6 +60,8 @@ export default function AuraBreathingCircle({
 
     switch (phaseType) {
       case 'in':
+        cancelAnimation(holdPulse);
+        holdPulse.value = withTiming(0, { duration: 300 });
         cancelAnimation(breathExpansion);
         breathExpansion.value = withTiming(1, {
           duration: durationMs,
@@ -58,11 +69,9 @@ export default function AuraBreathingCircle({
         });
         break;
 
-      case 'hold':
-        // Maintain static scale during holds
-        break;
-
       case 'out':
+        cancelAnimation(holdPulse);
+        holdPulse.value = withTiming(0, { duration: 300 });
         cancelAnimation(breathExpansion);
         breathExpansion.value = withTiming(0, {
           duration: durationMs,
@@ -70,19 +79,30 @@ export default function AuraBreathingCircle({
         });
         break;
 
+      case 'hold':
       case 'hold-out':
-        breathExpansion.value = 0;
+        // Freeze expansion where it is, but add a slow gentle pulse
+        // so the hold reads as "alive/waiting", not stuck.
+        cancelAnimation(breathExpansion);
+        cancelAnimation(holdPulse);
+        holdPulse.value = withRepeat(
+          withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+          -1,
+          true
+        );
         break;
     }
 
     return () => {
       cancelAnimation(breathExpansion);
+      cancelAnimation(holdPulse);
     };
-  }, [phaseIndex, isRunning, durationSeconds, phaseType, breathExpansion]);
+  }, [phaseIndex, isRunning, durationSeconds, phaseType, breathExpansion, holdPulse]);
 
   const coreStyle = useAnimatedStyle(() => {
-    const scale = interpolate(breathExpansion.value, [0, 1], [0.85, 1.35]);
-    return { transform: [{ scale }] };
+    const baseScale = interpolate(breathExpansion.value, [0, 1], [0.85, 1.35]);
+    const pulse = interpolate(holdPulse.value, [0, 1], [0, 0.03]);
+    return { transform: [{ scale: baseScale * (1 + pulse) }] };
   });
 
   const aura1Style = useAnimatedStyle(() => {
@@ -97,7 +117,8 @@ export default function AuraBreathingCircle({
     return { transform: [{ scale }], opacity };
   });
 
-  const altColor = secondaryColor || currentColor;
+  const effectiveColor = isRunning ? currentColor : idleColor;
+  const effectiveAlt = isRunning ? (secondaryColor || currentColor) : (idleSecondaryColor || idleColor);
 
   return (
     <Pressable
@@ -106,13 +127,12 @@ export default function AuraBreathingCircle({
       disabled={isRunning}
       hitSlop={20}
     >
-      {/* Outer Expanding Aura */}
       <Animated.View
         pointerEvents="none"
         style={[
           styles.aura,
           {
-            backgroundColor: currentColor,
+            backgroundColor: effectiveColor,
             width: CORE_SIZE,
             height: CORE_SIZE,
             borderRadius: CORE_SIZE / 2,
@@ -121,13 +141,12 @@ export default function AuraBreathingCircle({
         ]}
       />
 
-      {/* Middle Expanding Aura */}
       <Animated.View
         pointerEvents="none"
         style={[
           styles.aura,
           {
-            backgroundColor: altColor,
+            backgroundColor: effectiveAlt,
             width: CORE_SIZE,
             height: CORE_SIZE,
             borderRadius: CORE_SIZE / 2,
@@ -136,17 +155,15 @@ export default function AuraBreathingCircle({
         ]}
       />
 
-      {/* Inner Gradient Core Sphere */}
-      <Animated.View style={[styles.coreSphere, coreStyle]}>
+      <Animated.View style={[styles.coreSphere, { shadowColor: effectiveColor }, coreStyle]}>
         <LinearGradient
-          colors={[currentColor, altColor]}
+          colors={[effectiveColor, effectiveAlt]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradientCore}
         />
       </Animated.View>
 
-      {/* Center Label & Counter */}
       <View pointerEvents="none" style={styles.centerOverlay}>
         <Text style={styles.centerLabel}>
           {isRunning ? label : 'TAP TO START'}
@@ -165,7 +182,7 @@ const styles = StyleSheet.create({
     height: VISUALIZER_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 20,
+    marginVertical: 12,
   },
   aura: {
     position: 'absolute',
@@ -175,7 +192,6 @@ const styles = StyleSheet.create({
     height: CORE_SIZE,
     borderRadius: CORE_SIZE / 2,
     overflow: 'hidden',
-    shadowColor: '#00F2FE',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 18,
