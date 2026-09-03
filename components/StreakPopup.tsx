@@ -1,14 +1,8 @@
 import { StyleSheet, View, Text, Modal, Pressable } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Spacing } from '@/constants/theme';
+import LottieView from 'lottie-react-native';
+import fire from '@/assets/animations/Fire.json';
 
 interface StreakPopupProps {
   visible: boolean;
@@ -23,65 +17,33 @@ export default function StreakPopup({
   highestStreak,
   onClose 
 }: StreakPopupProps) {
-  const fireScale = useSharedValue(0);
-  const fireRotate = useSharedValue(0);
-  const popupScale = useSharedValue(0.5);
-  const popupOpacity = useSharedValue(0);
+  const fireAnimationRef = useRef<LottieView>(null);
 
   useEffect(() => {
     if (visible) {
-      // Entrance animation
-      popupScale.value = withSpring(1, { damping: 12, stiffness: 100 });
-      popupOpacity.value = withSpring(1);
-      
-      // Continuous fire animation
-      fireScale.value = withRepeat(
-        withTiming(1.3, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true
-      );
-      fireRotate.value = withRepeat(
-        withTiming(0.12, { duration: 600, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true
-      );
+      fireAnimationRef.current?.play();
     } else {
-      popupScale.value = withSpring(0.5);
-      popupOpacity.value = withSpring(0);
-      fireScale.value = withSpring(0);
-      fireRotate.value = withSpring(0);
+      fireAnimationRef.current?.pause();
     }
   }, [visible]);
 
-  const animatedFireStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: fireScale.value },
-      { rotate: `${fireRotate.value * 12}deg` }
-    ]
-  }));
-
-  const animatedPopupStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: popupScale.value }],
-    opacity: popupOpacity.value,
-  }));
-
   const getMessage = () => {
-    if (streakCount === 1) return "You've started your streak! 🎉";
-    if (streakCount <= 3) return "Keep it going! You're building momentum! 💪";
-    if (streakCount <= 7) return "You're on a roll! Amazing consistency! 🔥";
-    if (streakCount <= 14) return "Two weeks strong! You're unstoppable! ⚡";
-    if (streakCount <= 30) return "A whole month! You're a legend! 🏆";
-    return "Incredible dedication! You're the best! 🌟";
+    if (streakCount === 1) return "You've started your streak!";
+    if (streakCount <= 3) return "Keep it going! You're building momentum!";
+    if (streakCount <= 7) return "You're on a roll! Amazing consistency!";
+    if (streakCount <= 14) return "Two weeks strong! You're unstoppable!";
+    if (streakCount <= 30) return "A whole month! You're a legend!";
+    return "Incredible dedication! You're the best!";
   };
 
   const getAchievement = () => {
     if (streakCount === highestStreak && streakCount > 0) {
-      if (streakCount === 1) return "🌟 First streak!";
-      if (streakCount <= 3) return "🎯 Off to a great start!";
-      if (streakCount <= 7) return "🔥 On fire!";
-      if (streakCount <= 14) return "⚡ Unstoppable!";
-      if (streakCount <= 30) return "🏆 New record!";
-      return "👑 All-time best!";
+      if (streakCount === 1) return "First Streak";
+      if (streakCount <= 3) return "Great Start";
+      if (streakCount <= 7) return "On Fire";
+      if (streakCount <= 14) return "Unstoppable";
+      if (streakCount <= 30) return "New Record";
+      return "All-time Best";
     }
     return null;
   };
@@ -98,10 +60,17 @@ export default function StreakPopup({
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
         
-        <Animated.View style={[styles.popup, animatedPopupStyle]}>
-          <Animated.View style={[styles.fireContainer, animatedFireStyle]}>
-            <Text style={styles.fireEmoji}>🔥</Text>
-          </Animated.View>
+        <View style={styles.popup}>
+          <View style={styles.fireContainer}>
+            <LottieView
+              ref={fireAnimationRef}
+              source={fire}
+              style={styles.fireAnimation}
+              autoPlay={false}
+              loop={true}
+              speed={0.8}
+            />
+          </View>
 
           <Text style={styles.streakNumber}>{streakCount}</Text>
           <Text style={styles.streakLabel}>Day Streak</Text>
@@ -115,9 +84,9 @@ export default function StreakPopup({
           <Text style={styles.message}>{getMessage()}</Text>
 
           <Pressable style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>Amazing! ✨</Text>
+            <Text style={styles.buttonText}>Continue</Text>
           </Pressable>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -153,16 +122,21 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   fireContainer: {
-    marginBottom: Spacing.sm,
+    width: 120,
+    height: 120,
+    marginBottom: -20,
+    marginTop: -10,
   },
-  fireEmoji: {
-    fontSize: 72,
+  fireAnimation: {
+    width: 120,
+    height: 120,
   },
   streakNumber: {
     fontSize: 60,
     fontWeight: '700',
     color: '#FFFFFF',
     fontVariant: ['tabular-nums'],
+    marginTop: -10,
   },
   streakLabel: {
     fontSize: 18,

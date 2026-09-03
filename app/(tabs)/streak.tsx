@@ -1,58 +1,31 @@
 import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
 import { Fonts, Spacing } from '@/constants/theme';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withRepeat,
-  withTiming,
-  Easing
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStreak } from '@/hooks/useStreak';
 import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LottieView from 'lottie-react-native';
+import fire from '@/assets/animations/Fire.json';
 
 const STREAK_KEY = '@breathing_streak_data';
 
 export default function StreakScreen() {
   const { streak, loading, refresh, resetStreak } = useStreak();
+  const fireAnimationRef = useRef<LottieView>(null);
 
   // Refresh data every time the screen is focused
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+      // Play animation when screen is focused and streak > 0
+      if (streak.streakCount > 0) {
+        fireAnimationRef.current?.play();
+      }
+    }, [refresh, streak.streakCount])
   );
 
-  const fireScale = useSharedValue(1);
-  const fireRotate = useSharedValue(0);
-
-  if (streak.streakCount > 0) {
-    fireScale.value = withRepeat(
-      withTiming(1.15, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-    fireRotate.value = withRepeat(
-      withTiming(0.08, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-  } else {
-    fireScale.value = withSpring(1);
-    fireRotate.value = withSpring(0);
-  }
-
-  const animatedFireStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: fireScale.value },
-      { rotate: `${fireRotate.value * 8}deg` }
-    ]
-  }));
-
-  // ✅ Log button handler
+  // Log button handler
   const logStreakData = async () => {
     try {
       const saved = await AsyncStorage.getItem(STREAK_KEY);
@@ -63,6 +36,13 @@ export default function StreakScreen() {
       console.error('Error reading streak data:', error);
       alert('Error reading data. Check console for details.');
     }
+  };
+
+  // Reset button handler
+  const handleReset = async () => {
+    await resetStreak();
+    refresh();
+    fireAnimationRef.current?.pause();
   };
 
   return (
@@ -79,9 +59,17 @@ export default function StreakScreen() {
 
           <View style={styles.streakCard}>
             <View style={styles.streakContent}>
-              <Animated.View style={[styles.fireContainer, animatedFireStyle]}>
-                <Text style={styles.fireEmoji}>🔥</Text>
-              </Animated.View>
+              {/* Lottie Fire Animation */}
+              <View style={styles.fireContainer}>
+                <LottieView
+                  ref={fireAnimationRef}
+                  source={fire}
+                  style={styles.fireAnimation}
+                  autoPlay={false}
+                  loop={true}
+                  speed={0.8}
+                />
+              </View>
               <Text style={styles.streakNumber}>
                 {loading ? '...' : streak.streakCount}
               </Text>
@@ -90,7 +78,7 @@ export default function StreakScreen() {
           </View>
 
           <View style={styles.highestCard}>
-            <Text style={styles.highestLabel}>🏆 Best Streak</Text>
+            <Text style={styles.highestLabel}>Best Streak</Text>
             <Text style={styles.highestNumber}>
               {loading ? '...' : streak.highestStreak > 0 ? streak.highestStreak : '—'}
             </Text>
@@ -100,14 +88,30 @@ export default function StreakScreen() {
           </View>
 
           <View style={styles.motivationContainer}>
-            <Text style={styles.motivationEmoji}>✨</Text>
+            <Text style={styles.motivationEmoji}>✦</Text>
             <Text style={styles.motivationText}>
               {streak.streakCount === 0 && 'Start your journey today'}
-              {streak.streakCount === 1 && 'First step! Keep going! 🎉'}
-              {streak.streakCount >= 2 && streak.streakCount < 7 && 'Building momentum! 🌱'}
-              {streak.streakCount >= 7 && streak.streakCount < 30 && 'Strong habit forming! 💪'}
-              {streak.streakCount >= 30 && 'Unstoppable! You\'re a legend! 🏆'}
+              {streak.streakCount === 1 && 'First step! Keep going!'}
+              {streak.streakCount >= 2 && streak.streakCount < 7 && 'Building momentum!'}
+              {streak.streakCount >= 7 && streak.streakCount < 30 && 'Strong habit forming!'}
+              {streak.streakCount >= 30 && 'Unstoppable! You are a legend!'}
             </Text>
+          </View>
+
+          {/* Debug Buttons */}
+          <View style={styles.buttonRow}>
+            <Pressable 
+              style={[styles.button, styles.logButton]} 
+              onPress={logStreakData}
+            >
+              <Text style={styles.buttonText}>Log Data</Text>
+            </Pressable>
+            <Pressable 
+              style={[styles.button, styles.resetButton]} 
+              onPress={handleReset}
+            >
+              <Text style={styles.buttonText}>Reset</Text>
+            </Pressable>
           </View>
 
           <View style={styles.bottomPadding} />
@@ -153,16 +157,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fireContainer: {
-    marginBottom: Spacing.sm,
+    width: 120,
+    height: 120,
+    marginBottom: -10,
+    marginTop: -10,
   },
-  fireEmoji: {
-    fontSize: 56,
+  fireAnimation: {
+    width: 120,
+    height: 120,
   },
   streakNumber: {
     fontSize: 64,
     fontWeight: '700',
     color: '#fff',
     fontVariant: ['tabular-nums'],
+    marginTop: -10,
   },
   streakLabel: {
     fontSize: 20,
@@ -202,7 +211,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   motivationEmoji: {
-    fontSize: 32,
+    fontSize: 24,
+    color: 'rgba(255,255,255,0.3)',
     marginBottom: Spacing.sm,
   },
   motivationText: {
@@ -210,6 +220,34 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
     fontWeight: '400',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  button: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  logButton: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  resetButton: {
+    backgroundColor: 'rgba(255,80,80,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,80,80,0.2)',
+  },
+  buttonText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    fontWeight: '500',
   },
   bottomPadding: {
     height: 20,

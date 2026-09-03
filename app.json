@@ -42,20 +42,27 @@
         }
       ],
       "@react-native-vector-icons/ionicons",
-      ["react-native-android-widget", {
-        "widgets": [
-          {
-            "name": "Hello",
-            "label": "My Hello Widget",
-            "minWidth": "150dp",
-            "minHeight": "150dp",
-            "targetCellWidth": 2,
-            "targetCellHeight": 2,
-            "description": "Tap to open the app",
-            "previewImage": "./assets/widget-preview/hello.png"
-          }
-        ]
-      }]
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Hello",
+              "label": "My Hello Widget",
+              "minWidth": "150dp",
+              "minHeight": "150dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "description": "Tap to open the app",
+              "previewImage": "./assets/widget-preview/hello.png"
+            }
+          ]
+        }
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
