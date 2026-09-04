@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '@/constants/theme';
 import { CardProp } from '@/types/HomeScreen';
+import { haptics } from '@/utils/haptics';
 
 export default function Card({
   title,
@@ -46,6 +47,7 @@ export default function Card({
             style={styles.button}
             onPress={(e) => {
               e.stopPropagation();
+              haptics.select();
               onChange(count > 0 ? count - 1 : count);
             }}
           >
@@ -61,6 +63,7 @@ export default function Card({
             style={styles.button}
             onPress={(e) => {
               e.stopPropagation();
+              haptics.select();
               onChange(count + 1);
             }}
           >

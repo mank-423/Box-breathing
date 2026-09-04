@@ -17,8 +17,9 @@ export const Colors = {
   accentWarm: '#D98F76',        // soft clay — future home for SOS/streak/tab/CTA
   textPrimary: '#F5F1E8',       // warm cream, doubles as "foam" tone
   textSecondary: 'rgba(245,241,232,0.65)',
-  glassSurface: 'rgba(10,14,28,0.62)',   
-glassBorder: 'rgba(255,255,255,0.10)',
+  glassSurface: 'rgba(10,14,28,0.62)',
+  glassBorder: 'rgba(255,255,255,0.10)',
+  surfaceElevated: '#141824',
 };
 
 export const TechniqueColors = {

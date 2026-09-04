@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Spacing } from '@/constants/theme';
 import LottieView from 'lottie-react-native';
 import fire from '@/assets/animations/Fire.json';
+import { haptics } from '@/utils/haptics';
 
 interface StreakPopupProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export default function StreakPopup({
   useEffect(() => {
     if (visible) {
       fireAnimationRef.current?.play();
+      haptics.success();
     } else {
       fireAnimationRef.current?.pause();
     }

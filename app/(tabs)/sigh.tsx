@@ -6,6 +6,7 @@ import AuraBreathingCircle from '@/components/AuraBreathingCircle';
 import { useCompleteSession } from '@/hooks/useCompleteSession';
 import StreakPopup from '@/components/StreakPopup';
 import { TechniqueColors } from '@/constants/theme';
+import { haptics } from '@/utils/haptics';
 
 const STATES = [
   {
@@ -72,6 +73,7 @@ export default function Sigh() {
     setCurrentStateCount(0);
 
     if (shouldCompleteSession && wasRunning) {
+      haptics.success();
       completeSession().then((result) => {
         if (result?.updated) {
           setNewStreakCount(result.data.streakCount);
@@ -116,6 +118,7 @@ export default function Sigh() {
     const state = STATES[index];
     setCurrentIndex(index);
     setCurrentStateCount(state.duration);
+    haptics.tick();
 
     let countdown = state.duration;
     intervalRef.current = setInterval(() => {

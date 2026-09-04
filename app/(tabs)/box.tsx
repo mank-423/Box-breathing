@@ -6,6 +6,7 @@ import AuraBreathingCircle from '@/components/AuraBreathingCircle';
 import { useCompleteSession } from '@/hooks/useCompleteSession';
 import StreakPopup from '@/components/StreakPopup';
 import { TechniqueColors } from '@/constants/theme';
+import { haptics } from '@/utils/haptics';
 
 const PHASES = [
   {
@@ -80,6 +81,7 @@ export default function Box() {
     setCycleCount(0);
 
     if (shouldCompleteSession && wasRunning) {
+      haptics.success();
       completeSession().then((result) => {
         if (result?.updated) {
           setNewStreakCount(result.data.streakCount);
@@ -124,6 +126,7 @@ export default function Box() {
     const phase = PHASES[index];
     setPhaseIndex(index);
     setTime(phase.duration);
+    haptics.tick();
 
     let countdown = phase.duration;
     intervalRef.current = setInterval(() => {
