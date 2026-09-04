@@ -65,14 +65,6 @@ export default function TabLayout() {
         />
 
         <Tabs.Screen
-          name="breathe-placeholder"
-          options={{
-            title: '',
-            tabBarButton: () => <View style={{ flex: 1 }} />,
-          }}
-        />
-
-        <Tabs.Screen
           name="streak"
           options={{
             title: 'Streak',

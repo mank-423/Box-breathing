@@ -48,7 +48,7 @@ export default function Card({
             onPress={(e) => {
               e.stopPropagation();
               haptics.select();
-              onChange(count > 0 ? count - 1 : count);
+              onChange(count > 1 ? count - 1 : count);
             }}
           >
             <Text style={styles.buttonText}>−</Text>
