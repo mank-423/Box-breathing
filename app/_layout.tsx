@@ -1,12 +1,14 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import GridBackground from '@/components/GridBackground';
-import { registerWidgetTaskHandler } from 'react-native-android-widget';
-import { widgetTaskHandler } from '@/widgets/widget-task-handler';
-
-registerWidgetTaskHandler(widgetTaskHandler);
+import { notificationService } from '@/services/notificationService';
 
 export default function RootLayout() {
+  useEffect(() => {
+    notificationService.init();
+  }, []);
+
   return (
     <View style={styles.root}>
       <GridBackground />
